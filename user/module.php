@@ -7,25 +7,57 @@ use diversen\db\q;
 use diversen\db\rb;
 use diversen\html;
 use diversen\http;
+use diversen\moduleloader;
 use diversen\session;
+use diversen\user;
 
 rb::connect();
 
 class module {
     
-    public function indexAction () {
-        echo "Velkommen!";
+    /**
+     * Check if user has access 
+     * @return void
+     */
+    public function checkAccess () {
+        if (!session::isUser()) {
+            moduleloader::setStatus(403);
+            return;
+        }
     }
-    public function baseAction () {
-        echo $this->baseForm();
+    /**
+     * /event/user/index
+     * @return void
+     */
+    public function indexAction () {
+        $this->checkAccess();
+        
+                
+        if (isset($_POST['submit'])) {
+            $ary = db::prepareToPost();
+            $bean = rb::getBean('dancer', 'user_id', session::getUserId());
+            
+            $bean = rb::arrayToBean($bean, $ary);
+            $bean->user_id = session::getUserId();
+            rb::commitBean($bean);
+        }
+        echo $this->formBase();
     }
     
-    public function baseForm () {
+    /**
+     * User base form
+     * @return string $html
+     */
+    public function formBase () {
+        
+        $ary = q::select('dancer')->filter('user_id =', session::getUserId())->fetchSingle();
         
         $f = new html();
-        
+        $f->init($ary, 'submit', true);
         $f->formStart();
         $f->legend('Basis data - ret eller indsæt');
+        
+        $account = user::getAccount();
         
         $f->label('username', 'Dit navn');
         $f->text('username');
@@ -77,7 +109,7 @@ class module {
         
         
         $f->label('base');
-        $f->submit('base', 'Opdater');
+        $f->submit('submit', 'Opdater');
         
         $f->formEnd();
         
@@ -85,6 +117,7 @@ class module {
     }
     
     public function createAction () {
+        $this->checkAccess();
         
         http::prg();
         
@@ -104,10 +137,14 @@ class module {
         echo $this->formCreateKvadrille();
     }
     
+    /**
+     * /event/user/create
+     */
     public function create2Action () {
         
-        http::prg();
+        $this->checkAccess();
         
+        http::prg();
         if (isset($_POST['send'])) {
             if (empty($_POST['name'])) {
                 echo html::getError('Indtast et navn');
@@ -124,6 +161,11 @@ class module {
         echo $this->formCreateKvadrille('Opret en hel kvadrille');
     }
     
+    /**
+     * Form that creates a kvadrille
+     * @param string $title
+     * @return string $html
+     */
     public function formCreateKvadrille ($title = 'Opret en halv kvadrille') {
         $f = new html();
         $f->init(array(), 'send', true);
