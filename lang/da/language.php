@@ -2,12 +2,9 @@
 
 $LANG = array();
 
-// Translation of file modules/event//user/menu.inc
-
-$LANG['Basis data'] = 'Basis data';
 // Translation of file modules/event//install.inc
 
-$LANG['Event'] = 'Event';
+$LANG['Lanciers'] = 'Lanciers';
 // Translation of file modules/event//menu.inc
 
 $LANG['Elev'] = 'Elev';

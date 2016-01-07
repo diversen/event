@@ -2,13 +2,21 @@
 
 namespace modules\event;
 
+use diversen\http;
+use diversen\session;
+
 // use diversen\html;
 
 class module {
     
     public function indexAction () {
-        echo "hello world";
-        // echo $this->baseForm();
+        if (session::isAdmin()) {
+            http::locationHeader('/event/admin/index');
+        }
+        
+        if (session::isUser()) {
+            http::locationHeader('/event/user/index');
+        }
     }
     
 

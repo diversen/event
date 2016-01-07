@@ -17,7 +17,7 @@ if ($level == 'user') {
 
 if ($level =='admin') {
     $_MODULE_MENU[] = array(
-        'title' => lang::translate('Lærer'),
-        'url' => '/event/admin/index',
+        'title' => lang::translate('Import'),
+        'url' => '/event/admin/import',
         'auth' => 'admin');
 }
