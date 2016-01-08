@@ -6,6 +6,7 @@ use diversen\db;
 use diversen\db\q;
 use diversen\db\rb;
 use diversen\html;
+use diversen\html\helpers;
 use diversen\http;
 use diversen\moduleloader;
 use diversen\session;
@@ -59,8 +60,9 @@ class module {
         
         $account = user::getAccount();
         
+        $opt = array ('disabled' => 'disabled');
         $f->label('username', 'Dit navn');
-        $f->text('username');
+        $f->text('username', $account['username'], $opt);
         
         $sex = array (
             '0' => 'Vælg køn',
@@ -86,31 +88,8 @@ class module {
         $f->label('partner', 'Har du en partner, så vælg en fra listen');
         $f->selectAry('partner', $rows);
         
-        $halv = q::select('halv')->fetch();
-        unset($rows);
-        $rows[0] = 'Ingen halv kvadrille';
-        foreach ($halv as $a) {
-            $rows[$a['id']] = $a['name'];
-        }
-        
-        
-        $halv_label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
-        $halv_label.= html::createLink('/event/user/create', 'opret en ny');
-        
-        
-        $f->label('halv', " $create ");
-        $f->selectAry('halv', $rows);
-        
-        $hel = q::select('hel')->fetch();
-        unset($rows);
-        $rows[0] = 'Ingen hel kvadrille';
-        foreach ($hel as $a) {
-            $rows[$a['id']] = $a['name'];
-        }
-        
-        $create = html::createLink('/event/user/create2', 'opret en ny');
-        $f->label('hel', "Er du en del af en hel kvadrille? Hvis ja, så vælg fra listen herunder eller $create ");
-        $f->selectAry('hel', $rows);
+        $f = $this->formAttachHalv ($f);
+        $f = $this->formAttachHel($f);
         
         
         $f->label('base');
@@ -121,7 +100,110 @@ class module {
         return $f->getStr();    
     }
     
-    public function createAction () {
+    /**
+     * 
+     * @param Object $f \diversen\html
+     * @return type
+     */
+    public function formAttachHalv($f) {
+        $halv = q::select('halv')->fetch();
+        unset($rows);
+        $rows[0] = 'Ingen halv kvadrille';
+        foreach ($halv as $a) {
+            $rows[$a['id']] = $a['name'];
+        }
+        
+        $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
+        if (!empty($halv)) {
+            $label = "<hr />";
+            $label.= "Halv kvadrille: <b>$halv[name]</b>";
+            if ($halv['reserved'] == 1) {
+                $label.= " (reserveret)";
+            }
+            $label.= "<br />";
+            $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
+            $label.= html::createLink('/event/user/deletehalv', 'Slet');
+            $label.= "<hr />";
+            $f->label('halv', $label);
+            $f->hidden('halv', $halv['id']);
+            return $f;
+        }
+        
+        
+        $label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
+        $label.= html::createLink('/event/user/halv', 'opret en ny');
+        
+        
+        $f->label('halv', " $label ");
+        $f->selectAry('halv', $rows);
+        return $f;
+    }
+    
+    public function deletehalvAction () {
+        echo helpers::confirmDeleteForm('delete', 'Slet halv kvadrille');
+        
+        if (isset($_POST['delete'])) {
+            q::begin();
+            $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
+            q::delete('halvmember')->filter('halv_id =', $halv['id'])->exec();
+            q::delete('halv')->filter('user_id =', session::getUserId())->exec();
+            q::commit();
+            http::locationHeader('/event/user/index');
+        }
+    }
+    
+    public function deletehelAction () {
+        echo helpers::confirmDeleteForm('delete', 'Slet halv kvadrille');
+        
+        if (isset($_POST['delete'])) {
+            q::begin();
+            $hel = q::select('hel')->filter('user_id =', session::getUserId())->fetchSingle();
+            q::delete('helmember')->filter('hel_id =', $hel['id'])->exec();
+            q::delete('hel')->filter('user_id =', session::getUserId())->exec();
+            q::commit();
+            http::locationHeader('/event/user/index');
+        }
+    }
+    
+    
+    /**
+     * Attach hel to form
+     * @param object diversen\html
+     * @return type
+     */
+    public function formAttachHel ($f) {
+        $hel = q::select('hel')->fetch();
+
+        $rows = [];
+        $rows[0] = 'Ingen hel kvadrille';
+        foreach ($hel as $a) {
+            $rows[$a['id']] = $a['name'];
+        }
+        
+        $hel = q::select('hel')->filter('user_id =', session::getUserId())->fetchSingle();
+        if (!empty($hel)) {
+            $label = "<hr />";
+            $label.= "Hel kvadrille: <b>$hel[name]</b>";
+            if ($hel['reserved'] == 1) {
+                $label.= " (reserveret)";
+            }
+            $label.= "<br />";
+            $label.= "Du har oprettet en hel kvadrille, og du er derfor en del af den. ";
+            $label.= html::createLink('/event/user/deletehel', 'Slet');
+            $label.= "<hr />";
+            $f->label('hel', $label);
+            $f->hidden('hel', $hel['id']);
+            return $f;
+        }
+        
+        $create = html::createLink('/event/user/hel', 'opret en ny');
+        $f->label('hel', "Er du en del af en hel kvadrille? Hvis ja, så vælg fra listen herunder eller $create ");
+        $f->selectAry('hel', $rows);
+        
+        return $f;
+    }
+    
+    public function halvAction () {
         $this->checkAccess();
         
         http::prg();
@@ -151,7 +233,7 @@ class module {
     /**
      * /event/user/create
      */
-    public function create2Action () {
+    public function helAction () {
         
         $this->checkAccess();
         
@@ -164,7 +246,7 @@ class module {
                 $hel = rb::getBean('hel');
                 $hel->name = html::specialDecode($ary['name']);
                 $hel->reserved = html::specialDecode($ary['reserved']);
-                $hel->user = session::getUserId();
+                $hel->user_id = session::getUserId();
                 
                 $member = R::dispense( 'helmember' );
                 $member->user_id = session::getUserId();

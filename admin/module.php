@@ -2,12 +2,42 @@
 
 namespace modules\event\admin;
 
-use modules\event\import;
+use diversen\db\q;
 use diversen\html;
+use diversen\html\table;
+use diversen\moduleloader;
+use diversen\session;
+use modules\event\import;
 
 class module {
+    
+    public function checkAccess () {
+        if (session::isAdmin()) {
+            moduleloader::setStatus(403);
+            return;
+        }
+    }
+    
     public function indexAction () {
-        echo "Velkommen lærer";
+        $this->checkAccess(); 
+        if (isset($_GET['all']) ) {
+            $this->displayAll();
+        }
+    }
+    
+    public function displayAll () {
+        $rows = q::select('account')->filter('admin = ', 0 )->fetch();
+        
+        $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));
+        foreach($rows as $row) {
+            $str.=table::trBegin();
+            $str.=table::td($row['username'], array ('class' => 'uk-width-3-10 uk-text-bold'));
+            $str.=table::td($row['email']);
+            $str.=table::trEnd();
+            
+        }
+        $str.=table::tableEnd();
+        echo $str;
     }
     
     public function importAction () {

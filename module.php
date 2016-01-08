@@ -11,7 +11,7 @@ class module {
     
     public function indexAction () {
         if (session::isAdmin()) {
-            http::locationHeader('/event/admin/index');
+            http::locationHeader('/event/admin/index?all=1');
         }
         
         if (session::isUser()) {

@@ -8,7 +8,10 @@ $LANG['Lanciers'] = 'Lanciers';
 // Translation of file modules/event//menu.inc
 
 $LANG['Elev'] = 'Elev';
-$LANG['Lærer'] = 'Lærer';
-// Translation of file modules/event//admin/menu.inc
-
-$LANG['Importer'] = 'Importer';
+$LANG['Vis alle'] = 'Vis alle';
+$LANG['Par'] = 'Par';
+$LANG['Halve kvadriller'] = 'Halve kvadriller';
+$LANG['Kvadriller'] = 'Kvadriller';
+$LANG['Uden partner'] = 'Uden partner';
+$LANG['Ikke registreret'] = 'Ikke registreret';
+$LANG['Import'] = 'Import';
