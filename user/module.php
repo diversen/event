@@ -10,6 +10,7 @@ use diversen\http;
 use diversen\moduleloader;
 use diversen\session;
 use diversen\user;
+use R;
 
 rb::connect();
 
@@ -31,8 +32,7 @@ class module {
      */
     public function indexAction () {
         $this->checkAccess();
-        
-                
+
         if (isset($_POST['submit'])) {
             $ary = db::prepareToPost();
             $bean = rb::getBean('dancer', 'user_id', session::getUserId());
@@ -78,6 +78,7 @@ class module {
         $partners = $this->getUsers();
         $rows = [];
         $rows[0] = 'Ingen partner';
+        
         foreach($partners as $partner) {
             $rows[$partner['id']] = $partner['username'];
         }
@@ -85,18 +86,22 @@ class module {
         $f->label('partner', 'Har du en partner, så vælg en fra listen');
         $f->selectAry('partner', $rows);
         
-        $halv = q::select('halvkvadrille')->fetch();
+        $halv = q::select('halv')->fetch();
         unset($rows);
         $rows[0] = 'Ingen halv kvadrille';
         foreach ($halv as $a) {
             $rows[$a['id']] = $a['name'];
         }
         
-        $create = html::createLink('/event/user/create', 'opret en ny');
-        $f->label('halvkvadrille', "Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller $create ");
-        $f->selectAry('halvkvadrille', $rows);
         
-        $hel = q::select('helkvadrille')->fetch();
+        $halv_label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
+        $halv_label.= html::createLink('/event/user/create', 'opret en ny');
+        
+        
+        $f->label('halv', " $create ");
+        $f->selectAry('halv', $rows);
+        
+        $hel = q::select('hel')->fetch();
         unset($rows);
         $rows[0] = 'Ingen hel kvadrille';
         foreach ($hel as $a) {
@@ -104,8 +109,8 @@ class module {
         }
         
         $create = html::createLink('/event/user/create2', 'opret en ny');
-        $f->label('helkvadrille', "Er du en del af en hel kvadrille? Hvis ja, så vælg fra listen herunder eller $create ");
-        $f->selectAry('helkvadrille', $rows);
+        $f->label('hel', "Er du en del af en hel kvadrille? Hvis ja, så vælg fra listen herunder eller $create ");
+        $f->selectAry('hel', $rows);
         
         
         $f->label('base');
@@ -126,12 +131,18 @@ class module {
                 echo html::getError('Indtast et navn');
             } else {
                 $ary = db::prepareToPostArray(array('name', 'reserved'), true);
-                $bean = rb::getBean('halvkvadrille');
-                $bean->name = html::specialDecode($ary['name']);
-                $bean->reserved = html::specialDecode($ary['reserved']);
-                $bean->user = session::getUserId();
-                rb::commitBean($bean);
-                http::locationHeader('/event/user/base');
+                $halv = rb::getBean('halv');
+                $halv->name = html::specialDecode($ary['name']);
+                $halv->reserved = html::specialDecode($ary['reserved']);
+                $halv->user_id = session::getUserId();
+                
+                $member = R::dispense( 'halvmember' );
+                $member->user_id = session::getUserId();
+                
+                $halv->ownMemberList[] = $member;
+                
+                R::store($halv);
+                http::locationHeader('/event/user/index');
             }
         }
         echo $this->formCreateKvadrille();
@@ -150,12 +161,20 @@ class module {
                 echo html::getError('Indtast et navn');
             } else {
                 $ary = db::prepareToPostArray(array('name', 'reserved'), true);
-                $bean = rb::getBean('helkvadrille');
-                $bean->name = html::specialDecode($ary['name']);
-                $bean->reserved = html::specialDecode($ary['reserved']);
-                $bean->user = session::getUserId();
+                $hel = rb::getBean('hel');
+                $hel->name = html::specialDecode($ary['name']);
+                $hel->reserved = html::specialDecode($ary['reserved']);
+                $hel->user = session::getUserId();
+                
+                $member = R::dispense( 'helmember' );
+                $member->user_id = session::getUserId();
+                
+                $hel->ownMemberList[] = $member;
+                
+                R::store($hel);
+                
                 rb::commitBean($bean);
-                http::locationHeader('/event/user/base');
+                http::locationHeader('/event/user/index');
             }
         }
         echo $this->formCreateKvadrille('Opret en hel kvadrille');
