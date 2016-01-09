@@ -27,20 +27,20 @@ class module {
             return;
         }
     }
+    
     /**
      * /event/user/index
      * @return void
      */
     public function indexAction () {
         $this->checkAccess();
-
         if (isset($_POST['submit'])) {
             $ary = db::prepareToPost();
             $bean = rb::getBean('dancer', 'user_id', session::getUserId());
-            
             $bean = rb::arrayToBean($bean, $ary);
             $bean->user_id = session::getUserId();
             rb::commitBean($bean);
+            http::locationHeader('/event/user/index', 'Dine data blev opdateret');
         }
         echo $this->formBase();
     }
@@ -82,6 +82,9 @@ class module {
         $rows[0] = 'Ingen partner';
         
         foreach($partners as $partner) {
+            if ($partner['username'] == $account['username']) { 
+                continue;
+            }
             $rows[$partner['id']] = $partner['username'];
         }
         
@@ -107,7 +110,6 @@ class module {
      */
     public function formAttachHalv($f) {
         $halv = q::select('halv')->fetch();
-        unset($rows);
         $rows[0] = 'Ingen halv kvadrille';
         foreach ($halv as $a) {
             $rows[$a['id']] = $a['name'];
@@ -203,31 +205,59 @@ class module {
         return $f;
     }
     
+    /**
+     * /event/user/halv
+     */
     public function halvAction () {
         $this->checkAccess();
         
         http::prg();
-        
         if (isset($_POST['send'])) {
             if (empty($_POST['name'])) {
                 echo html::getError('Indtast et navn');
             } else {
                 $ary = db::prepareToPostArray(array('name', 'reserved'), true);
-                $halv = rb::getBean('halv');
-                $halv->name = html::specialDecode($ary['name']);
-                $halv->reserved = html::specialDecode($ary['reserved']);
-                $halv->user_id = session::getUserId();
-                
-                $member = R::dispense( 'halvmember' );
-                $member->user_id = session::getUserId();
-                
-                $halv->ownMemberList[] = $member;
-                
-                R::store($halv);
+                $this->dbCreateHalv($ary);
                 http::locationHeader('/event/user/index');
             }
         }
         echo $this->formCreateKvadrille();
+    }
+    
+    /**
+     * Delete a 'helmember' based on session::getUserId
+     * @return boolean $res result of R::thrashAll
+     */
+    public function dbDeleteHelMember(){
+        $members = R::findAll('helmember', "user_id = ?", array (session::getUserId()));
+        return R::trashAll($members);
+    }
+    
+    /**
+     * Delete a 'halvmember' based on session::getUserId
+     * @return boolean $res result of R::thrashAll
+     */
+    public function dbDeleteHalvMember(){
+        $members = R::findAll('halvmember', "user_id = ?", array (session::getUserId()));
+        return R::trashAll($members);
+    }
+    
+    /**
+     * Create a 'halv' member
+     * @param array $ary
+     * @return boolean $res result from R::store
+     */
+    public function dbCreateHalv($ary) {
+        $this->dbDeleteHalvMember();
+        
+        $halv = rb::getBean('halv');
+        $halv->name = html::specialDecode($ary['name']);
+        $halv->reserved = html::specialDecode($ary['reserved']);
+        $halv->user_id = session::getUserId();
+        $member = R::dispense('halvmember');
+        $member->user_id = session::getUserId();
+        $halv->ownMemberList[] = $member;
+        return R::store($halv);
     }
     
     /**
@@ -243,25 +273,29 @@ class module {
                 echo html::getError('Indtast et navn');
             } else {
                 $ary = db::prepareToPostArray(array('name', 'reserved'), true);
-                $hel = rb::getBean('hel');
-                $hel->name = html::specialDecode($ary['name']);
-                $hel->reserved = html::specialDecode($ary['reserved']);
-                $hel->user_id = session::getUserId();
-                
-                $member = R::dispense( 'helmember' );
-                $member->user_id = session::getUserId();
-                
-                $hel->ownMemberList[] = $member;
-                
-                R::store($hel);
-                
-                rb::commitBean($bean);
+                $this->dbCreateHel($ary);
                 http::locationHeader('/event/user/index');
             }
         }
         echo $this->formCreateKvadrille('Opret en hel kvadrille');
     }
-    
+
+    public function dbCreateHel($ary) {
+        
+        $this->dbDeleteHelMember();
+        
+        $hel = rb::getBean('hel');
+        $hel->name = html::specialDecode($ary['name']);
+        $hel->reserved = html::specialDecode($ary['reserved']);
+        $hel->user_id = session::getUserId();
+
+        $member = R::dispense('helmember');
+        $member->user_id = session::getUserId();
+
+        $hel->ownMemberList[] = $member;
+        return R::store($hel);
+    }
+
     /**
      * Form that creates a kvadrille
      * @param string $title
