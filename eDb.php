@@ -34,17 +34,17 @@ EOF;
      * @return array $rows
      */
     public function isPaired($user_id) {
-        $user_id = connect::$dbh->quote($user_id);
-        //  = db::$con->quote();
+        $q_user_id = connect::$dbh->quote($user_id);
         $q = <<<EOF
 SELECT DISTINCT
-    b.user_id as a,
-    a.user_id as b 
+    b.user_id as partner,
+    a.user_id as user_id 
         FROM dancer a, dancer b 
-    WHERE a.user_id = b.partner AND a.partner = b.user_id AND a.user_id = $user_id;
+    WHERE a.user_id = b.partner AND a.partner = b.user_id AND a.user_id = $q_user_id;
 EOF;
 
-        $rows = q::query($q)->fetch();
+        $rows = q::query($q)->fetchSingle();
+        
         return $rows;
     }
 }

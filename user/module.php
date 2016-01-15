@@ -37,8 +37,7 @@ class module {
         $this->checkAccess();
         
         $e = new eDb();
-        $rows = $e->isPaired(session::getUserId());
-        print_r($rows);
+        
         
         if (isset($_POST['submit'])) {
             
@@ -78,6 +77,8 @@ class module {
      */
     public function formBase () {
         
+        $eDb = new eDb();
+        
         $ary = q::select('dancer')->filter('user_id =', session::getUserId())->fetchSingle();
         
         $f = new html();
@@ -115,11 +116,22 @@ class module {
             $rows[$partner['id']] = $partner['username'];
         }
         
-        $f->label('partner', 'Har du en partner, så vælg en fra listen');
+        
+        $partner = $eDb->isPaired(session::getUserId());
+        if (!empty($partner)) {
+            $user = session::getAccount($partner['partner']);
+            $label = "Du har en partner: '$user[username]'"; 
+        } else {
+            $label = 'Har du en partner, så vælg en fra listen';
+            
+        }
+        $f->label('partner', $label);
         $f->selectAry('partner', $rows);
         
-        $f = $this->formAttachHalv ($f);
-        $f = $this->formAttachHel($f);
+        if (!empty($partner)) {
+            $f = $this->formAttachHalv ($f);
+            $f = $this->formAttachHel($f);
+        }
         
         
         $f->label('base');
