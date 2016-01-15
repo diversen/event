@@ -24,15 +24,14 @@ class module {
     public function indexAction () {
         $this->checkAccess(); 
         
-        $db = new db();
+        $eDb = new eDb();
         if (isset($_GET['all']) ) {
             $rows = q::select('account')->filter('admin = ', 0 )->order('username')->fetch();
             $this->displayAll($rows);
         }
         
         if (isset($_GET['par'])) {
-            $eDb = new eDb();
-            $eDb->getAllPairs();
+            $rows = $eDb->getAllPairs();
             $this->displayPairs($rows);
         }
         

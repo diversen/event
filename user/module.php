@@ -8,11 +8,12 @@ use diversen\db\rb;
 use diversen\html;
 use diversen\html\helpers;
 use diversen\http;
+use diversen\log;
 use diversen\moduleloader;
 use diversen\session;
 use diversen\user;
-use R;
 use modules\event\eDb;
+use R;
 
 rb::connect();
 
@@ -42,16 +43,14 @@ class module {
         if (isset($_POST['submit'])) {
             
             R::begin();
-            
-            
+
             $ary = db::prepareToPost();
             $bean = rb::getBean('dancer', 'user_id', session::getUserId());
             $bean = rb::arrayToBean($bean, $ary);
             $bean->user_id = session::getUserId();
             
             R::store($bean);
-            
-            
+
             $pairs = R::find('pair', 'user_id = ?', array(session::getUserId()));
             R::trashAll($pairs);
             
@@ -62,11 +61,9 @@ class module {
             R::store($pair);
             
             R::commit();
-            //if (R::commit()) {
-                http::locationHeader('/event/user/index', 'Dine data blev opdateret');
-            //} else {
-            //    echo html::getError('Et eller andet gik galt - prøv igen senere!');
-            //}
+
+            http::locationHeader('/event/user/index', 'Dine data blev opdateret');
+
         }
         echo $this->formBase();
     }
@@ -76,8 +73,6 @@ class module {
      * @return string $html
      */
     public function formBase () {
-        
-        $eDb = new eDb();
         
         $ary = q::select('dancer')->filter('user_id =', session::getUserId())->fetchSingle();
         
@@ -116,22 +111,24 @@ class module {
             $rows[$partner['id']] = $partner['username'];
         }
         
-        
+        log::debug("Mit bruger ID: " . session::getUserId());
+
+        $eDb = new eDb();
         $partner = $eDb->isPaired(session::getUserId());
         if (!empty($partner)) {
             $user = session::getAccount($partner['partner']);
             $label = "Du har en partner: '$user[username]'"; 
         } else {
-            $label = 'Har du en partner, så vælg en fra listen';
-            
+            $label = 'Har du en partner, så vælg en fra listen'; 
         }
+        
         $f->label('partner', $label);
         $f->selectAry('partner', $rows);
         
-        if (!empty($partner)) {
+        //if (!empty($partner)) {
             $f = $this->formAttachHalv ($f);
             $f = $this->formAttachHel($f);
-        }
+        //}
         
         
         $f->label('base');
@@ -148,6 +145,22 @@ class module {
      * @return type
      */
     public function formAttachHalv($f) {
+        
+        $eDb = new eDb();
+        $partner = $eDb->isPaired(session::getUserId());
+
+        $message = <<<EOF
+Du har valgt en partner, 
+men han/hun har endnu ikke verificeret dig. 
+Du kan først vælge en halv kvadrille, når han/hun har verficeret dig.
+EOF;
+        
+        if (empty($partner)) {
+            $f->addHtml(html::getError($message));
+            return $f;
+        }
+        
+        
         $halv = q::select('halv')->fetch();
         $rows[0] = 'Ingen halv kvadrille';
         foreach ($halv as $a) {
@@ -250,6 +263,12 @@ class module {
     public function halvAction () {
         $this->checkAccess();
         
+        $eDb = new eDb();
+        $pair = $eDb->isPaired(session::getUserId());
+        if (empty($pair)) {
+            http::locationHeader('/event/user/index', 'Du skal have en partner for at oprette en halv kvadrille');
+        }
+        
         http::prg();
         if (isset($_POST['send'])) {
             if (empty($_POST['name'])) {
@@ -287,6 +306,7 @@ class module {
      * @return boolean $res result from R::store
      */
     public function dbCreateHalv($ary) {
+         
         $this->dbDeleteHalvMember();
         
         $halv = rb::getBean('halv');
