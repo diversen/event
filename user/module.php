@@ -12,6 +12,7 @@ use diversen\moduleloader;
 use diversen\session;
 use diversen\user;
 use R;
+use modules\event\eDb;
 
 rb::connect();
 
@@ -34,13 +35,39 @@ class module {
      */
     public function indexAction () {
         $this->checkAccess();
+        
+        $e = new eDb();
+        $rows = $e->isPaired(session::getUserId());
+        print_r($rows);
+        
         if (isset($_POST['submit'])) {
+            
+            R::begin();
+            
+            
             $ary = db::prepareToPost();
             $bean = rb::getBean('dancer', 'user_id', session::getUserId());
             $bean = rb::arrayToBean($bean, $ary);
             $bean->user_id = session::getUserId();
-            rb::commitBean($bean);
-            http::locationHeader('/event/user/index', 'Dine data blev opdateret');
+            
+            R::store($bean);
+            
+            
+            $pairs = R::find('pair', 'user_id = ?', array(session::getUserId()));
+            R::trashAll($pairs);
+            
+            $pair = rb::getBean('pair', 'user_id', session::getUserId());
+            $pair->partner = $ary['partner'];
+            $pair->user_id = session::getUserId();
+            
+            R::store($pair);
+            
+            R::commit();
+            //if (R::commit()) {
+                http::locationHeader('/event/user/index', 'Dine data blev opdateret');
+            //} else {
+            //    echo html::getError('Et eller andet gik galt - prøv igen senere!');
+            //}
         }
         echo $this->formBase();
     }
