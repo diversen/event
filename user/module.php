@@ -42,24 +42,32 @@ class module {
         
         if (isset($_POST['submit'])) {
             
+            $user_id = session::getUserId();
             R::begin();
 
             $ary = db::prepareToPost();
-            $bean = rb::getBean('dancer', 'user_id', session::getUserId());
+            
+            $bean = rb::getBean('dancer', 'user_id', $user_id);
             $bean = rb::arrayToBean($bean, $ary);
-            $bean->user_id = session::getUserId();
+            $bean->user_id = $user_id;
             
             R::store($bean);
 
-            $pairs = R::find('pair', 'user_id = ?', array(session::getUserId()));
+            // Remove all pairs containing user
+            
+            $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
             R::trashAll($pairs);
             
-            $pair = rb::getBean('pair', 'user_id', session::getUserId());
-            $pair->partner = $ary['partner'];
-            $pair->user_id = session::getUserId();
-            
-            R::store($pair);
-            
+            // Check for a real pair
+            $e = new eDb();
+            $pair = $e->isPaired(session::getUserId());
+            if (!empty($pair)) {
+                $pair = rb::getBean('pair', 'user_id', session::getUserId());
+                $pair->user_a = $ary['partner'];
+                $pair->user_b = session::getUserId();
+                R::store($pair);            
+            }
+
             R::commit();
 
             http::locationHeader('/event/user/index', 'Dine data blev opdateret');
