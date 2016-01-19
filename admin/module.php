@@ -51,8 +51,8 @@ class module {
     public function displayPairs ( $rows ) {
         $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));
         foreach($rows as $row) {
-            $a = session::getAccount($row['a']);
-            $b = session::getAccount($row['b']);
+            $a = session::getAccount($row['user_a']);
+            $b = session::getAccount($row['user_b']);
             $str.=table::trBegin();
             $str.=table::td($a['username'], array ('class' => 'uk-width-3-10 uk-text-bold'));
             $str.=table::td($b['username'], array ('class' => 'uk-text-bold'));

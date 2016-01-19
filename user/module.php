@@ -39,7 +39,6 @@ class module {
         
         $e = new eDb();
         
-        
         if (isset($_POST['submit'])) {
             
             $user_id = session::getUserId();
@@ -47,14 +46,13 @@ class module {
 
             $ary = db::prepareToPost();
             
+            // Base info
             $bean = rb::getBean('dancer', 'user_id', $user_id);
             $bean = rb::arrayToBean($bean, $ary);
             $bean->user_id = $user_id;
-            
             R::store($bean);
 
-            // Remove all pairs containing user
-            
+            // Remove all pairs containing user            
             $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
             R::trashAll($pairs);
             
@@ -158,9 +156,7 @@ class module {
         $partner = $eDb->isPaired(session::getUserId());
 
         $message = <<<EOF
-Du har valgt en partner, 
-men han/hun har endnu ikke verificeret dig. 
-Du kan først vælge en halv kvadrille, når han/hun har verficeret dig.
+Du kan først vælge en halv kvadrille, når du har dannet et verficeret par.
 EOF;
         
         if (empty($partner)) {
@@ -347,6 +343,7 @@ EOF;
         echo $this->formCreateKvadrille('Opret en hel kvadrille');
     }
 
+    
     public function dbCreateHel($ary) {
         
         $this->dbDeleteHelMember();
@@ -375,8 +372,8 @@ EOF;
         $f->legend($title);
         $f->label('name','Indtast et navn');
         $f->text('name');
-        $f->label('reserved', 'Reserveret');
-        $f->checkbox('reserved');
+        //$f->label('reserved', 'Reserveret');
+        //$f->checkbox('reserved');
         $f->label('send');
         $f->submit('send', 'Opret');
         $f->formEnd();

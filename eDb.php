@@ -25,8 +25,13 @@ SELECT DISTINCT
     WHERE a.user_id = b.partner AND a.partner = b.user_id;
 EOF;
 
+        $q = "SELECT * FROM pair";
         $rows = q::query($q)->fetch();
         return $rows;
+    }
+    
+    public function getAllPairsDropDown () {
+        
     }
     
     /**
