@@ -2,9 +2,9 @@
 
 namespace modules\event;
 
-use diversen\db;
-use diversen\db\q;
 use diversen\db\connect;
+use diversen\db\q;
+use diversen\session;
 
 /**
  * SQL class for doing SQL ...
@@ -51,5 +51,27 @@ EOF;
         $rows = q::query($q)->fetchSingle();
         
         return $rows;
+    }
+    
+    public function formPairsAry () {
+        $pairs = $this->getAllPairs();
+        $ary = [];
+        $ary[0] = 'Intet par valgt';
+        foreach ($pairs as $pair) {
+            $a = session::getAccount($pair['user_a']);
+            $b = session::getAccount($pair['user_b']);
+            
+            if ($a['id'] == session::getUserId()) {
+                continue;
+            }
+            if ($b['id'] == session::getUserId()) {
+                continue;
+            }
+            
+            $pair_str = $a['username'] . ' - ' . $b['username'];
+            $ary[$pair['id']] = $pair_str;
+        }
+        return $ary;
+        
     }
 }
