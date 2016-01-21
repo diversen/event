@@ -5,8 +5,6 @@ namespace modules\event;
 use diversen\http;
 use diversen\session;
 
-// use diversen\html;
-
 class module {
     
     public function indexAction () {

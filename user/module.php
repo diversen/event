@@ -6,7 +6,6 @@ use diversen\db;
 use diversen\db\q;
 use diversen\db\rb;
 use diversen\html;
-use diversen\html\helpers;
 use diversen\http;
 use diversen\log;
 use diversen\moduleloader;
@@ -15,7 +14,7 @@ use diversen\user;
 use modules\event\eDb;
 use R;
 
-rb::connect();
+
 
 class module {
     
@@ -52,19 +51,7 @@ class module {
             $bean->user_id = $user_id;
             R::store($bean);
 
-            // Remove all pairs containing user            
-            $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
-            R::trashAll($pairs);
-            
-            // Check for a real pair
-            $e = new eDb();
-            $pair = $e->isPaired(session::getUserId());
-            if (!empty($pair)) {
-                $pair = rb::getBean('pair', 'user_id', session::getUserId());
-                $pair->user_a = $ary['partner'];
-                $pair->user_b = session::getUserId();
-                R::store($pair);            
-            }
+            $this->dbUpdatePairs($user_id, $ary);
 
             R::commit();
 
@@ -74,6 +61,25 @@ class module {
         echo $this->formBase();
     }
     
+    
+    public function dbUpdatePairs($user_id, $ary) {
+        
+        // Remove all pairs containing user            
+        $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
+        R::trashAll($pairs);
+
+        // Check for a real pair
+        $e = new eDb();
+        $pair = $e->isPaired(session::getUserId());
+
+        if (!empty($pair)) {
+            $pair = rb::getBean('pair', 'user_id', session::getUserId());
+            $pair->user_a = $ary['partner'];
+            $pair->user_b = session::getUserId();
+            R::store($pair);
+        }
+    }
+
     /**
      * User base form
      * @return string $html

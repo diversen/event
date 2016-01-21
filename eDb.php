@@ -4,12 +4,17 @@ namespace modules\event;
 
 use diversen\db\connect;
 use diversen\db\q;
+use diversen\db\rb;
 use diversen\session;
 
 /**
  * SQL class for doing SQL ...
  */
 class eDb {
+    
+    public function __construct() {
+        rb::connect();
+    }
     
     /**
      * Method which will get all pairs
@@ -35,8 +40,9 @@ EOF;
     }
     
     /**
-     * Method that will check if a user is paired
-     * @return array $rows
+     * Method that will check if a user has a partner
+     * dancer table is used
+     * @return array $row a single row
      */
     public function isPaired($user_id) {
         $q_user_id = connect::$dbh->quote($user_id);
@@ -48,9 +54,8 @@ SELECT DISTINCT
     WHERE a.user_id = b.partner AND a.partner = b.user_id AND a.user_id = $q_user_id;
 EOF;
 
-        $rows = q::query($q)->fetchSingle();
-        
-        return $rows;
+        $row = q::query($q)->fetchSingle();
+        return $row;
     }
     
     public function formPairsAry () {
