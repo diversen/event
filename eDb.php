@@ -55,6 +55,24 @@ EOF;
     }
     
     /**
+     * Get a pair row from user_a and user_b
+     * @param int $user_a
+     * @param int $user_b
+     * @return array $row row from pair table 
+     */
+    public function getPairFromPartners ($user_a, $user_b) {
+        $row = q::select('pair')->filter('user_a =', $user_a)->condition('AND')->filter('user_b =', $user_b)->fetchSingle();
+        if (!empty($row)) {
+            return $row;
+        }
+        $row = q::select('pair')->filter('user_b =', $user_a)->condition('AND')->filter('user_a =', $user_b)->fetchSingle();
+        if (!empty($row)) {
+            return $row;
+        }
+        return array ();
+    }
+    
+    /**
      * Update a pair when a form is submitted. 
      * Check if the pair already exists.
      * If it does not exists, then thrash pair with user_id
@@ -63,18 +81,30 @@ EOF;
      */
     public function updatePairs($user_id, $ary) {
         
-        // Remove all pairs containing user            
-        $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
-        R::trashAll($pairs);
+        // Fetch an existing pair
+        $row = $this->getPairFromPartners($user_id, $ary['partner']);
+        
+        // No existing pair 
+        if (empty($row)) {
 
-        // Check for a real pair
-        $pair = $this->getPairFromUserId(session::getUserId());
+            // No pair - we thrash all pairs with user
+            $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
+-           R::trashAll($pairs);
+            
+            // Check for a new pair in dancers table
+            $pair = $this->getPairFromUserId(session::getUserId());
 
-        if (!empty($pair)) {
-            $pair = rb::getBean('pair', 'user_id', session::getUserId());
-            $pair->user_a = $ary['partner'];
-            $pair->user_b = session::getUserId();
-            R::store($pair);
+            if (!empty($pair)) {
+                
+                
+
+                // And add new pair
+                $pair = rb::getBean('pair', 'user_id', session::getUserId());
+                $pair->user_a = $ary['partner'];
+                $pair->user_b = session::getUserId();
+                R::store($pair);
+                
+            }
         }
     }
 
