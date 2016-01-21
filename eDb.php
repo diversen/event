@@ -54,17 +54,21 @@ EOF;
         return R::store($bean);
     }
     
-        
+    /**
+     * Update a pair when a form is submitted. 
+     * Check if the pair already exists.
+     * If it does not exists, then thrash pair with user_id
+     * @param type $user_id
+     * @param type $ary
+     */
     public function updatePairs($user_id, $ary) {
-        
         
         // Remove all pairs containing user            
         $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
         R::trashAll($pairs);
 
         // Check for a real pair
-        $e = new eDb();
-        $pair = $e->getPairFromUserId(session::getUserId());
+        $pair = $this->getPairFromUserId(session::getUserId());
 
         if (!empty($pair)) {
             $pair = rb::getBean('pair', 'user_id', session::getUserId());
@@ -92,6 +96,10 @@ EOF;
         return $row;
     }
     
+    /**
+     * Get all pairs as an array
+     * @return array $ary array of pairs
+     */
     public function formPairsAry () {
         $pairs = $this->getAllPairs();
         $ary = [];
