@@ -43,15 +43,12 @@ class module {
             $user_id = session::getUserId();
             R::begin();
 
+            // Update base info
             $ary = db::prepareToPost();
-            
-            // Base info
-            $bean = rb::getBean('dancer', 'user_id', $user_id);
-            $bean = rb::arrayToBean($bean, $ary);
-            $bean->user_id = $user_id;
-            R::store($bean);
+            $e->updateDancer($user_id, $ary);
 
-            $this->dbUpdatePairs($user_id, $ary);
+            // Update pair
+            $e->updatePairs($user_id, $ary);
 
             R::commit();
 
@@ -61,24 +58,10 @@ class module {
         echo $this->formBase();
     }
     
-    
-    public function dbUpdatePairs($user_id, $ary) {
+    public function pairChanged () {
         
-        // Remove all pairs containing user            
-        $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
-        R::trashAll($pairs);
-
-        // Check for a real pair
-        $e = new eDb();
-        $pair = $e->isPaired(session::getUserId());
-
-        if (!empty($pair)) {
-            $pair = rb::getBean('pair', 'user_id', session::getUserId());
-            $pair->user_a = $ary['partner'];
-            $pair->user_b = session::getUserId();
-            R::store($pair);
-        }
     }
+
 
     /**
      * User base form
@@ -126,7 +109,7 @@ class module {
         log::debug("Mit bruger ID: " . session::getUserId());
 
         $eDb = new eDb();
-        $partner = $eDb->isPaired(session::getUserId());
+        $partner = $eDb->getPairFromUserId(session::getUserId());
         if (!empty($partner)) {
             $user = session::getAccount($partner['partner']);
             $label = "Du har en partner: '$user[username]'"; 
@@ -159,7 +142,7 @@ class module {
     public function formAttachHalv($f) {
         
         $eDb = new eDb();
-        $partner = $eDb->isPaired(session::getUserId());
+        $partner = $eDb->getPairFromUserId(session::getUserId());
 
         $message = <<<EOF
 Du kan først vælge en halv kvadrille, når du har dannet et verficeret par.
@@ -172,8 +155,6 @@ EOF;
         
         
         $pairs = $eDb->formPairsAry();
-        print_r($pairs);
-        
         
         $f->label('halv', " Vælg et par - og opret derved en halv kvadrille ");
         $f->selectAry('halv', $pairs);

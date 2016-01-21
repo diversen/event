@@ -6,6 +6,7 @@ use diversen\db\connect;
 use diversen\db\q;
 use diversen\db\rb;
 use diversen\session;
+use R;
 
 /**
  * SQL class for doing SQL ...
@@ -40,11 +41,44 @@ EOF;
     }
     
     /**
-     * Method that will check if a user has a partner
-     * dancer table is used
+     * Method that updates a dancers base info
+     * @param int $user_id
+     * @param array $ary $base info from form
+     * @return boolean
+     */
+    public function updateDancer($user_id, $ary) {
+        // Base info
+        $bean = rb::getBean('dancer', 'user_id', $user_id);
+        $bean = rb::arrayToBean($bean, $ary);
+        $bean->user_id = $user_id;
+        return R::store($bean);
+    }
+    
+        
+    public function updatePairs($user_id, $ary) {
+        
+        
+        // Remove all pairs containing user            
+        $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
+        R::trashAll($pairs);
+
+        // Check for a real pair
+        $e = new eDb();
+        $pair = $e->getPairFromUserId(session::getUserId());
+
+        if (!empty($pair)) {
+            $pair = rb::getBean('pair', 'user_id', session::getUserId());
+            $pair->user_a = $ary['partner'];
+            $pair->user_b = session::getUserId();
+            R::store($pair);
+        }
+    }
+
+    /**
+     * Method that will check and get a pair from dancer table
      * @return array $row a single row
      */
-    public function isPaired($user_id) {
+    public function getPairFromUserId($user_id) {
         $q_user_id = connect::$dbh->quote($user_id);
         $q = <<<EOF
 SELECT DISTINCT
