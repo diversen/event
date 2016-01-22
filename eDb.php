@@ -69,28 +69,36 @@ EOF;
         return array ();
     }
 
+    /**
+     * Delete 'halv' from user_id
+     * @param int $user_id
+     * @return boolean $res
+     */
+    public function deleteHalvFromUserId($user_id) {
+        
+        // Delete all 'halve' if user owns them
+        $halve = R::findAll('halv', 'user_id = ?', [$user_id]);
+        return R::trashAll($halve);
+
+    }
     
     /**
      * Delete pairs with user
      * @param int $user_id
      * @return boolean $res
      */
-    public function deletePairWithUser($user_id) {
+    public function deletePairByUserId($user_id) {
         // No pair - we thrash all pairs with user
-        $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
+        //return;
+        $pairs = R::findAll('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
         R::trashAll($pairs);
         
-        // Delete halv if user owns one
-        $halv = R::findOne('halv', 'user_id = ?', [$user_id]);
-        if ($halv->id) { 
-            
-            // Delete halvmember
-            $members = R::find('halvmember', 'halv_id = ?', [$halv->id]);
-            R::trashAll($members);
+        return $this->deleteHalvFromUserId($user_id);
+        
+        
+        
+        return;
 
-            // Delete halv
-            R::trash($halv);
-        }
     }
 
     
@@ -144,7 +152,7 @@ EOF;
         // No existing pair 
         if (empty($row)) {
 
-            $this->deletePairWithUser($user_id);
+            $this->deletePairByUserId($user_id);
             
             // Check for a new pair in dancers table
             $pair = $this->getPairFromDancers(session::getUserId());
@@ -194,19 +202,7 @@ EOF;
         
         return $row;
     }
-    
-    
-    /**
-     * Delete a 'halvmember' based on session::getUserId
-     * @return boolean $res result of R::thrashAll
-     */
-    public function deleteUserPairMembers(){
-        $ary = $this->getUserPairFromUserId(session::getUserId());
-        $members = R::findAll('halvmember', "user_id = ? OR user_id = ?", 
-                array ($ary['user_a'], $ary['user_b']));
-        R::trashAll($members);
-    }
-    
+
     /**
      * Attach halvmembers
      * @param object $halv
@@ -224,26 +220,28 @@ EOF;
         $b_a = $pair_b['user_a'];
         $b_b = $pair_b['user_b'];
         
+        $halv->xownMemberList = array();
+        
         // Owner is a member and confirmed
         $member = R::dispense('halvmember');
         $member->user_id = session::getUserId();
         $member->confirmed = 1;
-        $halv->ownMemberList[] = $member;
+        $halv->xownMemberList[] = $member;
         
         $member_2 = R::dispense('halvmember');
         $member_2->user_id = $a_b;
-        $member_2->confirmed = 0;
-        $halv->ownMemberList[] = $member_2;
+        $member_2->confirmed = 1;
+        $halv->xownMemberList[] = $member_2;
         
         $member_3 = R::dispense('halvmember');
         $member_3->user_id = $b_a;
         $member_3->confirmed = 0;
-        $halv->ownMemberList[] = $member_3;
+        $halv->xownMemberList[] = $member_3;
         
         $member_4 = R::dispense('halvmember');
         $member_4->user_id = $b_b;
         $member_4->confirmed = 0;
-        $halv->ownMemberList[] = $member_4;
+        $halv->xownMemberList[] = $member_4;
         
         return $halv;
     }
@@ -255,8 +253,6 @@ EOF;
      */
     public function createHalv($ary) {
         
-        // delete halv owners pair members
-        $this->deleteUserPairMembers();
         
         // create halv
         $halv = rb::getBean('halv');

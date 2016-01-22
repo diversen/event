@@ -262,11 +262,8 @@ EOF;
         echo helpers::confirmDeleteForm('delete', 'Slet halv kvadrille');
         
         if (isset($_POST['delete'])) {
-            q::begin();
-            $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
-            q::delete('halvmember')->filter('halv_id =', $halv['id'])->exec();
-            q::delete('halv')->filter('user_id =', session::getUserId())->exec();
-            q::commit();
+            $eDb = new eDb();
+            $eDb->deleteHalvFromUserId(session::getUserId());
             http::locationHeader('/event/user/index');
         }
     }
