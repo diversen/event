@@ -13,6 +13,7 @@ use diversen\session;
 use diversen\user;
 use diversen\html\helpers;
 use modules\event\eDb;
+use modules\event\eHelpers;
 use R;
 
 
@@ -61,11 +62,6 @@ class module {
         
         echo $this->formBase();
     }
-    
-    public function pairChanged () {
-        
-    }
-
 
     /**
      * User base form
@@ -195,6 +191,22 @@ EOF;
     }
     
     /**
+     * var holding form submission errors
+     * @var array $errors
+     */
+    public $errors = array ();
+    
+    public function validateHalv () {
+        if (empty($_POST['name'])) {
+            $this->errors[] = 'Indtast et navn';
+        }
+        if ($_POST['pair'] == 0) {
+            $this->errors[] = 'Du skal vælge et par som skal indgå i din halv kvadrille';
+        }
+        
+    }
+    
+    /**
      * /event/user/halv
      */
     public function halvAction () {
@@ -208,12 +220,13 @@ EOF;
         
         http::prg();
         if (isset($_POST['send'])) {
-            if (empty($_POST['name'])) {
-                echo html::getError('Indtast et navn');
-            } else {
+            $this->validateHalv();
+            if (empty($this->errors)) {
                 $ary = db::prepareToPostArray(array('name', 'reserved'), true);
                 $eDb->createHalv($ary);
                 http::locationHeader('/event/user/index');
+            } else {
+                echo html::getErrors($this->errors);
             }
         }
         echo $this->formCreateKvadrille();
@@ -232,7 +245,11 @@ EOF;
         $f->label('name','Indtast et navn');
         $f->text('name');
         
+        $h = new eHelpers();
+        $ary = $h->getFormPairsAry();
         
+        $f->label('pair', 'Vælg et par som skal indgå i din halv kvadrille');
+        $f->selectAry('pair', $ary);
         
         $f->label('send');
         $f->submit('send', 'Opret');
@@ -263,15 +280,7 @@ EOF;
         $members = R::findAll('helmember', "user_id = ?", array (session::getUserId()));
         return R::trashAll($members);
     }
-    
-    /**
-     * Delete a 'halvmember' based on session::getUserId
-     * @return boolean $res result of R::thrashAll
-     */
-    public function dbDeleteHalvMember(){
-        $members = R::findAll('halvmember', "user_id = ?", array (session::getUserId()));
-        return R::trashAll($members);
-    }
+
 
     
 

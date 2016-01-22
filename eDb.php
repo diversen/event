@@ -6,6 +6,7 @@ use diversen\db\connect;
 use diversen\db\q;
 use diversen\db\rb;
 use diversen\session;
+use diversen\html;
 use R;
 
 /**
@@ -18,10 +19,10 @@ class eDb {
     }
     
     /**
-     * Method which will get all pairs
+     * Method which will get all pairs from dancer
      * @return array $rows
      */
-    public function getAllPairs() {
+    public function getAllPairsFromDancers() {
         
         $q = <<<EOF
 SELECT DISTINCT
@@ -35,11 +36,7 @@ EOF;
         $rows = q::query($q)->fetch();
         return $rows;
     }
-    
-    public function getAllPairsDropDown () {
-        
-    }
-    
+
     /**
      * Method that updates a dancers base info
      * @param int $user_id
@@ -170,41 +167,27 @@ EOF;
         return $row;
     }
     
-    /**
-     * Get all pairs as an array
-     * @return array $ary array of pairs
-     */
-    public function formPairsAry () {
-        $pairs = $this->getAllPairs();
-        $ary = [];
-        $ary[0] = 'Intet par valgt';
-        foreach ($pairs as $pair) {
-            $a = session::getAccount($pair['user_a']);
-            $b = session::getAccount($pair['user_b']);
-            
-            if ($a['id'] == session::getUserId()) {
-                continue;
-            }
-            if ($b['id'] == session::getUserId()) {
-                continue;
-            }
-            
-            $pair_str = $a['username'] . ' - ' . $b['username'];
-            $ary[$pair['id']] = $pair_str;
-        }
-        return $ary;
-        
-    }
     
-        
+    /**
+     * Delete a 'halvmember' based on session::getUserId
+     * @return boolean $res result of R::thrashAll
+     */
+    public function deleteHalvMember(){
+        $members = R::findAll('halvmember', "user_id = ?", array (session::getUserId()));
+        return R::trashAll($members);
+    }
+       
     /**
      * Create a 'halv' member
      * @param array $ary
      * @return boolean $res result from R::store
      */
     public function createHalv($ary) {
-         
-        $this->dbDeleteHalvMember();
+        
+        $e = new eDb();
+        $e->getAllPairsFromDancers();
+        
+        $this->deleteHalvMember();
         
         $halv = rb::getBean('halv');
         $halv->name = html::specialDecode($ary['name']);
@@ -212,6 +195,8 @@ EOF;
         $halv->user_id = session::getUserId();
         $member = R::dispense('halvmember');
         $member->user_id = session::getUserId();
+        $member->confirmed = 1;
+        
         $halv->ownMemberList[] = $member;
         return R::store($halv);
     }
