@@ -11,6 +11,7 @@ use diversen\log;
 use diversen\moduleloader;
 use diversen\session;
 use diversen\user;
+use diversen\html\helpers;
 use modules\event\eDb;
 use R;
 
@@ -50,8 +51,7 @@ class module {
             // Update pair
             $e->updatePairs($user_id, $ary);
             
-            // Update quartet
-            $e->updateHalv($user_id, $ary);
+
 
             R::commit();
 
@@ -144,19 +144,114 @@ class module {
         $partner = $eDb->getPairFromPairs(session::getUserId());
 
         $message = <<<EOF
-Du kan først vælge en halv kvadrille, når du har dannet et verficeret par.
+Du kan først vælge / oprette en halv kvadrille, når du har dannet et verficeret par.
 EOF;
         
         if (empty($partner)) {
             $f->addHtml(html::getError($message));
             return $f;
         }
-          
+        
+        /*
         $pairs = $eDb->formPairsAry();
+        
+        
         
         $f->label('halv', " Vælg et par - og opret derved en halv kvadrille ");
         $f->selectAry('halv', $pairs);
+        return $f; */
+        
+        $halv = q::select('halv')->fetch();
+        $rows[0] = 'Ingen halv kvadrille';
+        foreach ($halv as $a) {
+            $rows[$a['id']] = $a['name'];
+        }
+        
+        $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
+        if (!empty($halv)) {
+            $label = "<hr />";
+            $label.= "Halv kvadrille: <b>$halv[name]</b>";
+            if ($halv['reserved'] == 1) {
+                $label.= " (reserveret)";
+            }
+            $label.= "<br />";
+            $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
+            $label.= html::createLink('/event/user/deletehalv', 'Slet');
+            $label.= "<hr />";
+            $f->label('halv', $label);
+            $f->hidden('halv', $halv['id']);
+            return $f;
+        }
+        
+        
+        $label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
+        $label.= html::createLink('/event/user/halv', 'opret en ny');
+        
+        
+        $f->label('halv', " $label ");
+        $f->selectAry('halv', $rows);
         return $f;
+        
+    }
+    
+    /**
+     * /event/user/halv
+     */
+    public function halvAction () {
+        $this->checkAccess();
+        
+        $eDb = new eDb();
+        $pair = $eDb->getPairFromPairs(session::getUserId());
+        if (empty($pair)) {
+            http::locationHeader('/event/user/index', 'Du skal have en partner for at oprette en halv kvadrille');
+        }
+        
+        http::prg();
+        if (isset($_POST['send'])) {
+            if (empty($_POST['name'])) {
+                echo html::getError('Indtast et navn');
+            } else {
+                $ary = db::prepareToPostArray(array('name', 'reserved'), true);
+                $eDb->createHalv($ary);
+                http::locationHeader('/event/user/index');
+            }
+        }
+        echo $this->formCreateKvadrille();
+    }
+    
+        /**
+     * Form that creates a kvadrille
+     * @param string $title
+     * @return string $html
+     */
+    public function formCreateKvadrille ($title = 'Opret en halv kvadrille') {
+        $f = new html();
+        $f->init(array(), 'send', true);
+        $f->formStart();
+        $f->legend($title);
+        $f->label('name','Indtast et navn');
+        $f->text('name');
+        
+        
+        
+        $f->label('send');
+        $f->submit('send', 'Opret');
+        $f->formEnd();
+        return $f->getStr();
+    }
+    
+    
+    public function deletehalvAction () {
+        echo helpers::confirmDeleteForm('delete', 'Slet halv kvadrille');
+        
+        if (isset($_POST['delete'])) {
+            q::begin();
+            $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
+            q::delete('halvmember')->filter('halv_id =', $halv['id'])->exec();
+            q::delete('halv')->filter('user_id =', session::getUserId())->exec();
+            q::commit();
+            http::locationHeader('/event/user/index');
+        }
     }
 
     
@@ -174,28 +269,10 @@ EOF;
      * @return boolean $res result of R::thrashAll
      */
     public function dbDeleteHalvMember(){
-        $members = R::fifndAll('halvmember', "user_id = ?", array (session::getUserId()));
+        $members = R::findAll('halvmember', "user_id = ?", array (session::getUserId()));
         return R::trashAll($members);
     }
-    
-    /**
-     * Create a 'halv' member
-     * @param array $ary
-     * @return boolean $res result from R::store
-     */
-    public function dbCreateHalv($ary) {
-         
-        $this->dbDeleteHalvMember();
-        
-        $halv = rb::getBean('halv');
-        $halv->name = html::specialDecode($ary['name']);
-        $halv->reserved = html::specialDecode($ary['reserved']);
-        $halv->user_id = session::getUserId();
-        $member = R::dispense('halvmember');
-        $member->user_id = session::getUserId();
-        $halv->ownMemberList[] = $member;
-        return R::store($halv);
-    }
+
     
 
 

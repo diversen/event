@@ -71,34 +71,7 @@ EOF;
         }
         return array ();
     }
-    
-        /**
-     * Get a quartet row from pair_a and pair_b
-     * @param int $pair_a
-     * @param int $pair_b
-     * @return array $row row from quartet table 
-     */
-    public function getHalvFromUserId ($user_id, $ary) {
-        
-        // First get pair - return empty if no pair
-        $pair = $this->getPairFromPairs($user_id);
-        if (empty($pair)) {
-            return array();
-        }
-        
-        $pair_a = $pair['id'];
-        $pair_b = $ary['halv'];
-        
-        $row = q::select('halv')->filter('pair_a =', $pair_a)->condition('AND')->filter('pair_b =', $pair_b)->fetchSingle();
-        if (!empty($row)) {
-            return $row;
-        }
-        $row = q::select('halv')->filter('pair_b =', $pair_a)->condition('AND')->filter('pair_a =', $pair_b)->fetchSingle();
-        if (!empty($row)) {
-            return $row;
-        }
-        return array ();
-    }
+
     
     /**
      * Delete pairs with user
@@ -164,41 +137,6 @@ EOF;
     }
     
     /**
-     * Update a quartet
-     * @param int $user_id
-     * @param array $ary dancer info
-     */
-    public function updateHalv ($user_id, $ary) {
-        
-        $pair = $this->getPairFromPairs($user_id);
-        
-        // Fetch an existing quartet
-        $row = $this->getHalvFromUserId($user_id, $ary);
-        
-        // No existing quartet
-        if (empty($row)) {    
-
-            // Delete quartet with pair
-            $this->deleteHalvWithPair($user_id, $ary);
-            
-            // Check for a new halv in dancers table
-            $halv = $this->getHalvFromDancers($user_id, $ary);
-
-            if (!empty($halv)) {
-                
-                print_r($halv); die;
-                
-                // And add new pair
-                $halv = rb::getBean('halv', 'user_id', session::getUserId());
-                $pair->pair_a = $ary['partner'];
-                $pair->pair_b = session::getUserId();
-                R::store($pair);
-                
-            }
-        }
-    }
-
-    /**
      * Method that will check and get a pair from dancer table
      * @return array $row a single row
      */
@@ -256,5 +194,25 @@ EOF;
         }
         return $ary;
         
+    }
+    
+        
+    /**
+     * Create a 'halv' member
+     * @param array $ary
+     * @return boolean $res result from R::store
+     */
+    public function createHalv($ary) {
+         
+        $this->dbDeleteHalvMember();
+        
+        $halv = rb::getBean('halv');
+        $halv->name = html::specialDecode($ary['name']);
+        $halv->reserved = html::specialDecode($ary['reserved']);
+        $halv->user_id = session::getUserId();
+        $member = R::dispense('halvmember');
+        $member->user_id = session::getUserId();
+        $halv->ownMemberList[] = $member;
+        return R::store($halv);
     }
 }
