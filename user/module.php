@@ -108,7 +108,7 @@ class module {
         }
 
         $eDb = new eDb();
-        $partner = $eDb->getPairFromPairs(session::getUserId());
+        $partner = $eDb->getUserPairFromUserId(session::getUserId());
         if (!empty($partner)) {   
             $user = session::getAccount($ary['partner']);
             $label = "Du har en partner: '$user[username]'"; 
@@ -137,7 +137,7 @@ class module {
     public function formAttachHalv($f) {
         
         $eDb = new eDb();
-        $partner = $eDb->getPairFromPairs(session::getUserId());
+        $partner = $eDb->getUserPairFromUserId(session::getUserId());
 
         $message = <<<EOF
 Du kan først vælge / oprette en halv kvadrille, når du har dannet et verficeret par.
@@ -213,7 +213,7 @@ EOF;
         $this->checkAccess();
         
         $eDb = new eDb();
-        $pair = $eDb->getPairFromPairs(session::getUserId());
+        $pair = $eDb->getUserPairFromUserId(session::getUserId());
         if (empty($pair)) {
             http::locationHeader('/event/user/index', 'Du skal have en partner for at oprette en halv kvadrille');
         }
@@ -222,7 +222,7 @@ EOF;
         if (isset($_POST['send'])) {
             $this->validateHalv();
             if (empty($this->errors)) {
-                $ary = db::prepareToPostArray(array('name', 'reserved'), true);
+                $ary = db::prepareToPostArray(array('name', 'reserved', 'pair'), true);
                 $eDb->createHalv($ary);
                 http::locationHeader('/event/user/index');
             } else {

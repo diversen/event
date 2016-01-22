@@ -97,8 +97,34 @@ EOF;
      * @param int $user_id
      * @return array $row
      */
-    public function getPairFromPairs ($user_id) {
+    public function getUserPairFromUserId ($user_id) {
         return q::select('pair')->filter('user_a =', $user_id)->condition('OR')->filter('user_b =', $user_id)->fetchSingle();
+    }
+    
+    /**
+     * Get pair from pair - based on pair id
+     * @param int $id
+     * @return array $pair
+     */
+    public function getPair ($id) {
+        return q::select('pair')->filter('id =', $id)->fetchSingle();
+    }
+    
+    /**
+     * Get other member of pair - based on session::getUserId
+     * @param int $id
+     * @return int $user_id
+     */
+    public function getPairPartnerUserId ($user_id) {
+        $pair = $this->getUserPairFromUserId($user_id);
+        if (empty($pair)) {
+            return array();
+        }
+        
+        if ($pair['user_a'] == session::getUserId()) {
+            return $pair['user_b'];
+        } 
+        return $pair['user_a'];
     }
     
     /**
@@ -172,32 +198,73 @@ EOF;
      * Delete a 'halvmember' based on session::getUserId
      * @return boolean $res result of R::thrashAll
      */
-    public function deleteHalvMember(){
-        $members = R::findAll('halvmember', "user_id = ?", array (session::getUserId()));
-        return R::trashAll($members);
+    public function deleteUserPairMembers(){
+        $ary = $this->getUserPairFromUserId(session::getUserId());
+        $members = R::findAll('halvmember', "user_id = ? OR user_id = ?", 
+                array ($ary['user_a'], $ary['user_b']));
+        R::trashAll($members);
     }
-       
+    
     /**
-     * Create a 'halv' member
+     * Attach halvmembers
+     * @param object $halv
      * @param array $ary
+     * @return object $halv 
+     */
+    public function attachMembersForHalv ($halv, $ary) {
+        
+        $e = new eDb();
+
+        //$pair = $this->getUserPairFromUserId(session::getUserId());
+        $a_b = $e->getPairPartnerUserId(session::getUserId());
+        
+        // Selected pair
+        $pair_b = $e->getPair($ary['pair']);
+        $b_a = $pair_b['user_a'];
+        $b_b = $pair_b['user_b'];
+        
+        // Owner is a member and confirmed
+        $member = R::dispense('halvmember');
+        $member->user_id = session::getUserId();
+        $member->confirmed = 1;
+        $halv->ownMemberList[] = $member;
+        
+        $member_2 = R::dispense('halvmember');
+        $member_2->user_id = $a_b;
+        $member_2->confirmed = 0;
+        $halv->ownMemberList[] = $member_2;
+        
+        $member_3 = R::dispense('halvmember');
+        $member_3->user_id = $b_a;
+        $member_3->confirmed = 0;
+        $halv->ownMemberList[] = $member_3;
+        
+        $member_4 = R::dispense('halvmember');
+        $member_4->user_id = $b_b;
+        $member_4->confirmed = 0;
+        $halv->ownMemberList[] = $member_4;
+        
+        return $halv;
+    }
+    
+    /**
+     * Create a 'halv' and all 'halvmembers'
+     * @param array $ary _POST
      * @return boolean $res result from R::store
      */
     public function createHalv($ary) {
         
-        $e = new eDb();
-        $e->getAllPairsFromDancers();
+        // delete halv owners pair members
+        $this->deleteUserPairMembers();
         
-        $this->deleteHalvMember();
-        
+        // create halv
         $halv = rb::getBean('halv');
         $halv->name = html::specialDecode($ary['name']);
         $halv->reserved = html::specialDecode($ary['reserved']);
         $halv->user_id = session::getUserId();
-        $member = R::dispense('halvmember');
-        $member->user_id = session::getUserId();
-        $member->confirmed = 1;
         
-        $halv->ownMemberList[] = $member;
+        // Attach all 4 members
+        $halv = $this->attachMembersForHalv($halv, $ary);
         return R::store($halv);
     }
 }
