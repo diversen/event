@@ -72,6 +72,65 @@ EOF;
         return array ();
     }
     
+        /**
+     * Get a quartet row from pair_a and pair_b
+     * @param int $pair_a
+     * @param int $pair_b
+     * @return array $row row from quartet table 
+     */
+    public function getHalvFromUserId ($user_id, $ary) {
+        
+        // First get pair - return empty if no pair
+        $pair = $this->getPairFromPairs($user_id);
+        if (empty($pair)) {
+            return array();
+        }
+        
+        $pair_a = $pair['id'];
+        $pair_b = $ary['halv'];
+        
+        $row = q::select('halv')->filter('pair_a =', $pair_a)->condition('AND')->filter('pair_b =', $pair_b)->fetchSingle();
+        if (!empty($row)) {
+            return $row;
+        }
+        $row = q::select('halv')->filter('pair_b =', $pair_a)->condition('AND')->filter('pair_a =', $pair_b)->fetchSingle();
+        if (!empty($row)) {
+            return $row;
+        }
+        return array ();
+    }
+    
+    /**
+     * Delete pairs with user
+     * @param int $user_id
+     * @return boolean $res
+     */
+    public function deletePairWithUser($user_id) {
+        // No pair - we thrash all pairs with user
+        $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
+        return R::trashAll($pairs);
+    }
+    
+    /**
+     * Delete quartet with pair
+     * @param int $pair_id
+     * @return boolean $res
+     */
+    public function deleteHalvWithPair($pair_id) {
+        // No pair - we thrash all pairs with user
+        $halve = R::find('halv', 'pair_a = ? OR pair_b = ?', [$pair_id, $pair_id]);
+        return R::trashAll($halve);
+    }
+    
+    /**
+     * Return a pair from user_id
+     * @param int $user_id
+     * @return array $row
+     */
+    public function getPairFromPairs ($user_id) {
+        return q::select('pair')->filter('user_a =', $user_id)->condition('OR')->filter('user_b =', $user_id)->fetchSingle();
+    }
+    
     /**
      * Update a pair when a form is submitted. 
      * Check if the pair already exists.
@@ -87,21 +146,52 @@ EOF;
         // No existing pair 
         if (empty($row)) {
 
-            // No pair - we thrash all pairs with user
-            $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
--           R::trashAll($pairs);
+            $this->deletePairWithUser($user_id);
             
             // Check for a new pair in dancers table
-            $pair = $this->getPairFromUserId(session::getUserId());
+            $pair = $this->getPairFromDancers(session::getUserId());
 
             if (!empty($pair)) {
                 
-                
-
                 // And add new pair
                 $pair = rb::getBean('pair', 'user_id', session::getUserId());
                 $pair->user_a = $ary['partner'];
                 $pair->user_b = session::getUserId();
+                R::store($pair);
+                
+            }
+        }
+    }
+    
+    /**
+     * Update a quartet
+     * @param int $user_id
+     * @param array $ary dancer info
+     */
+    public function updateHalv ($user_id, $ary) {
+        
+        $pair = $this->getPairFromPairs($user_id);
+        
+        // Fetch an existing quartet
+        $row = $this->getHalvFromUserId($user_id, $ary);
+        
+        // No existing quartet
+        if (empty($row)) {    
+
+            // Delete quartet with pair
+            $this->deleteHalvWithPair($user_id, $ary);
+            
+            // Check for a new halv in dancers table
+            $halv = $this->getHalvFromDancers($user_id, $ary);
+
+            if (!empty($halv)) {
+                
+                print_r($halv); die;
+                
+                // And add new pair
+                $halv = rb::getBean('halv', 'user_id', session::getUserId());
+                $pair->pair_a = $ary['partner'];
+                $pair->pair_b = session::getUserId();
                 R::store($pair);
                 
             }
@@ -112,7 +202,7 @@ EOF;
      * Method that will check and get a pair from dancer table
      * @return array $row a single row
      */
-    public function getPairFromUserId($user_id) {
+    public function getPairFromDancers($user_id) {
         $q_user_id = connect::$dbh->quote($user_id);
         $q = <<<EOF
 SELECT DISTINCT
@@ -123,6 +213,22 @@ SELECT DISTINCT
 EOF;
 
         $row = q::query($q)->fetchSingle();
+        return $row;
+    }
+    
+    /**
+     * @return array $row a single row
+     */
+    public function getHalvFromDancers($user_id, $ary) {
+        
+        $halv = $ary['halv'];
+        
+        // Get partner pair
+        $partner_pair = q::select('pair')->filter('id =', $halv)->fetchSingle();
+        
+        $user_a = q::select('dancer')->filter('user_id =', $partner_pair['user_a'])->fetchSingle();
+        // if ($user_a['halv'] == $)
+        
         return $row;
     }
     

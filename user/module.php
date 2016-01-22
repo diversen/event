@@ -49,12 +49,16 @@ class module {
 
             // Update pair
             $e->updatePairs($user_id, $ary);
+            
+            // Update quartet
+            $e->updateHalv($user_id, $ary);
 
             R::commit();
 
             http::locationHeader('/event/user/index', 'Dine data blev opdateret');
 
         }
+        
         echo $this->formBase();
     }
     
@@ -71,6 +75,7 @@ class module {
         
         $ary = q::select('dancer')->filter('user_id =', session::getUserId())->fetchSingle();
         
+        log::debug("User id: $ary[user_id]");
         $f = new html();
         $f->init($ary, 'submit', true);
         $f->formStart();
@@ -105,13 +110,11 @@ class module {
             }
             $rows[$partner['id']] = $partner['username'];
         }
-        
-        log::debug("Mit bruger ID: " . session::getUserId());
 
         $eDb = new eDb();
-        $partner = $eDb->getPairFromUserId(session::getUserId());
-        if (!empty($partner)) {
-            $user = session::getAccount($partner['partner']);
+        $partner = $eDb->getPairFromPairs(session::getUserId());
+        if (!empty($partner)) {   
+            $user = session::getAccount($ary['partner']);
             $label = "Du har en partner: '$user[username]'"; 
         } else {
             $label = 'Har du en partner, så vælg en fra listen'; 
@@ -120,11 +123,7 @@ class module {
         $f->label('partner', $label);
         $f->selectAry('partner', $rows);
         
-        //if (!empty($partner)) {
-            $f = $this->formAttachHalv ($f);
-            // $f = $this->formAttachHel($f);
-        //}
-        
+        $f = $this->formAttachHalv ($f);
         
         $f->label('base');
         $f->submit('submit', 'Opdater');
@@ -142,7 +141,7 @@ class module {
     public function formAttachHalv($f) {
         
         $eDb = new eDb();
-        $partner = $eDb->getPairFromUserId(session::getUserId());
+        $partner = $eDb->getPairFromPairs(session::getUserId());
 
         $message = <<<EOF
 Du kan først vælge en halv kvadrille, når du har dannet et verficeret par.
@@ -152,8 +151,7 @@ EOF;
             $f->addHtml(html::getError($message));
             return $f;
         }
-        
-        
+          
         $pairs = $eDb->formPairsAry();
         
         $f->label('halv', " Vælg et par - og opret derved en halv kvadrille ");
