@@ -78,19 +78,21 @@ EOF;
     public function deletePairWithUser($user_id) {
         // No pair - we thrash all pairs with user
         $pairs = R::find('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
-        return R::trashAll($pairs);
+        R::trashAll($pairs);
+        
+        // Delete halv if user owns one
+        $halv = R::findOne('halv', 'user_id = ?', [$user_id]);
+        if ($halv->id) { 
+            
+            // Delete halvmember
+            $members = R::find('halvmember', 'halv_id = ?', [$halv->id]);
+            R::trashAll($members);
+
+            // Delete halv
+            R::trash($halv);
+        }
     }
-    
-    /**
-     * Delete quartet with pair
-     * @param int $pair_id
-     * @return boolean $res
-     */
-    public function deleteHalvWithPair($pair_id) {
-        // No pair - we thrash all pairs with user
-        $halve = R::find('halv', 'pair_a = ? OR pair_b = ?', [$pair_id, $pair_id]);
-        return R::trashAll($halve);
-    }
+
     
     /**
      * Return a pair from user_id
@@ -215,7 +217,6 @@ EOF;
         
         $e = new eDb();
 
-        //$pair = $this->getUserPairFromUserId(session::getUserId());
         $a_b = $e->getPairPartnerUserId(session::getUserId());
         
         // Selected pair
