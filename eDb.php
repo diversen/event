@@ -247,6 +247,19 @@ EOF;
     }
     
     /**
+     * Get 'halve' where user is invited
+     * @param int $user_id
+     * @return array $rows
+     */
+    public function getHalvUserInvites ($user_id, $confirmed = 0) {
+        $user_id = connect::$dbh->quote($user_id);
+        $q = <<<EOF
+SELECT halv_id FROM halvmember WHERE user_id = $user_id AND confirmed = $confirmed AND halv_id IS NOT NULL
+EOF;
+        return q::query($q)->fetch();
+    }
+    
+    /**
      * Create a 'halv' and all 'halvmembers'
      * @param array $ary _POST
      * @return boolean $res result from R::store

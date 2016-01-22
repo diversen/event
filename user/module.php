@@ -71,7 +71,7 @@ class module {
         
         $ary = q::select('dancer')->filter('user_id =', session::getUserId())->fetchSingle();
         
-        log::debug("User id: $ary[user_id]");
+        // echo ("User id: $ary[user_id]");
         $f = new html();
         $f->init($ary, 'submit', true);
         $f->formStart();
@@ -83,6 +83,7 @@ class module {
         $f->label('username', 'Dit navn');
         $f->text('username', $account['username'], $opt);
         
+        /*
         $sex = array (
             '0' => 'Vælg køn',
             '1' => 'Kvinde',
@@ -91,7 +92,7 @@ class module {
         
         $f->label('sex', 'Dit køn');
         $f->selectAry('sex', $sex);
-        
+        */
         $f->label('comment', 'Evt. kommentar');
         $f->textareaSmall('comment');
         
@@ -148,28 +149,14 @@ EOF;
             return $f;
         }
         
-        /*
-        $pairs = $eDb->formPairsAry();
-        
-        
-        
-        $f->label('halv', " Vælg et par - og opret derved en halv kvadrille ");
-        $f->selectAry('halv', $pairs);
-        return $f; */
-        
-        $halv = q::select('halv')->fetch();
-        $rows[0] = 'Ingen halv kvadrille';
-        foreach ($halv as $a) {
-            $rows[$a['id']] = $a['name'];
-        }
-        
+        // User has created 'halv'         
         $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
         if (!empty($halv)) {
             $label = "<hr />";
-            $label.= "Halv kvadrille: <b>$halv[name]</b>";
-            if ($halv['reserved'] == 1) {
-                $label.= " (reserveret)";
-            }
+            $label.= "Halv kvadrille: <b>" . html::specialEncode($halv['name']) . "</b>";
+            // if ($halv['reserved'] == 1) {
+            //    $label.= " (reserveret)";
+            // }
             $label.= "<br />";
             $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
             $label.= html::createLink('/event/user/deletehalv', 'Slet');
@@ -179,7 +166,23 @@ EOF;
             return $f;
         }
         
+        // User is invited and has confirmed
+        $halve = $eDb->getHalvUserInvites(session::getUserId(), 1);
+        if (!empty($halve)) {
+            $label = <<<EOF
+Du er en del af en halv kvadrille. Det kan være din partner som har valgt dig ind.
+Hvis du mener det er fejl kan du vælge 'Ingen kvadrille valgt'
+EOF;
+            //$label.= html::createLink('/event/user/deletehalv', 'Slet');
+            //$label.= "<hr />";
+        }
         
+        $halv = q::select('halv')->fetch();
+        $rows[0] = 'Ingen kvadrille valgt';
+        foreach ($halv as $a) {
+            $rows[$a['id']] = $a['name'];
+        }
+
         $label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
         $label.= html::createLink('/event/user/halv', 'opret en ny');
         
