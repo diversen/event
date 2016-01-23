@@ -91,15 +91,16 @@ $(document).ready(function(){
 
         if (!empty($partner)) {
             $this->formDeletePartner();
+            $this->formHalv();
         } else {
             $this->formPartner();
         }
     }
     
     public function formDeletePartner() {
+        
         $this->javascript();
         $user = session::getAccount(session::getUserId());
-        // echo "<h3></h3>";
         echo helpers::confirmDeleteForm(
                 'delete_partner', "Du har en partner: '$user[username]'", 'Ophæv partnerskab');
 
@@ -164,31 +165,24 @@ EOF;
         
         echo $f->getStr(); 
     }
-    
-    public function formHalv () {
 
-        
-        $f = $this->formAttachHalv ($f);
-    }
     
     /**
      * 
      * @param Object $f \diversen\html
      * @return type
      */
-    public function formAttachHalv($f) {
+    public function formHalv() {
+        
+        $ary = array ();
+        $f = new html();
+        $f->init($ary, 'submit', true);
+        $f->formStart();
+        $f->legend('Basis data - ret eller indsæt');
         
         $eDb = new eDb();
         $partner = $eDb->getUserPairFromUserId(session::getUserId());
 
-        $message = <<<EOF
-Du kan først vælge / oprette en halv kvadrille, når du har dannet et verficeret par.
-EOF;
-        
-        if (empty($partner)) {
-            $f->addHtml(html::getError($message));
-            return $f;
-        }
         
         // User has created 'halv'         
         $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
@@ -214,7 +208,8 @@ Hvis du mener det er fejl kan du vælge 'Ingen kvadrille valgt'
 EOF;
             $f->label('halv', " $label ");
             $f->selectAry('halv', $halve);
-            return $f;
+            echo $f->getStr();
+            return;
         }
         
         $label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
@@ -222,7 +217,13 @@ EOF;
         
         $f->label('halv', " $label ");
         $f->selectAry('halv', $rows);
-        return $f;
+        
+        $f->label('base');
+        $f->submit('submit', 'Opdater');
+        
+        $f->formEnd();
+        echo $f->getStr();
+        // return $f;
         
     }
     
