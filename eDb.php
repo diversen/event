@@ -253,11 +253,48 @@ EOF;
      */
     public function getHalvUserInvites ($user_id, $confirmed = 0) {
         $user_id = connect::$dbh->quote($user_id);
+        
         $q = <<<EOF
-SELECT halv_id FROM halvmember WHERE user_id = $user_id AND confirmed = $confirmed AND halv_id IS NOT NULL
+SELECT DISTINCT
+    m.halv_id,
+    h.id, h.name as title 
+        FROM halvmember m, halv h 
+    WHERE m.halv_id = h.id AND m.user_id = $user_id AND m.confirmed = $confirmed AND m.halv_id IS NOT NULL
 EOF;
         return q::query($q)->fetch();
     }
+    
+    public function getHalvUserInvitesForDropDown ($user_id, $confirmed = 0) {
+        $rows = $this->getHalvUserInvites($user_id, $confirmed);
+        $ary[] = 'Ingen kvadrille valgt';
+        foreach ($rows as $val) {
+            $title = $this->getUsersStrFromHalv($val['id']);
+            $ary[$val['id']] = $title;
+        }
+        return $ary;
+    }
+    
+    /**
+     * Get all users that belongs to a 'halv'
+     * @param int $halv
+     * @return array $rows
+     */
+    public function getUsersFromHalv($halv) {
+        return q::select('halvmember')->filter('halv_id =', $halv)->fetch();
+    }
+    
+    
+    public function getUsersStrFromHalv($halv) {
+        $users = $this->getUsersFromHalv($halv);
+        $ary = [];
+        foreach($users as $user) {
+            $account = session::getAccount($user['user_id']);
+            $ary[] = $account['username'];
+        }
+        return implode(' - ', $ary);
+    }
+    
+    
     
     /**
      * Create a 'halv' and all 'halvmembers'

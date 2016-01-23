@@ -37,24 +37,15 @@ class module {
      */
     public function indexAction () {
         $this->checkAccess();
-        
-        $e = new eDb();
+
         
         if (isset($_POST['submit'])) {
             
             $user_id = session::getUserId();
-            R::begin();
-
+            
             // Update base info
             $ary = db::prepareToPost();
-            $e->updateDancer($user_id, $ary);
-
-            // Update pair
-            $e->updatePairs($user_id, $ary);
-            
-
-
-            R::commit();
+            $this->updateFromForm($user_id, $ary);
 
             http::locationHeader('/event/user/index', 'Dine data blev opdateret');
 
@@ -62,16 +53,67 @@ class module {
         
         echo $this->formBase();
     }
+    
+    public function updateFromForm ($user_id, $ary) {
+                
+        $e = new eDb();
+        R::begin();
+        
+        // Update base info
+        $e->updateDancer($user_id, $ary);
 
+        // Update pair
+        $e->updatePairs($user_id, $ary);
+        R::commit();
+    }
+
+    public function javascript () { ?>
+<script>
+$(document).ready(function(){
+  $("#delete_partner").click(function(){
+    if (!confirm("Do you want to delete")){
+      return false;
+    }
+  });
+});
+</script>
+        <?php
+    }
+    
     /**
      * User base form
      * @return string $html
      */
     public function formBase () {
-        
+                
+        $eDb = new eDb();
+        $partner = $eDb->getUserPairFromUserId(session::getUserId());
+
+        if (!empty($partner)) {
+            $this->formDeletePartner();
+        } else {
+            $this->formPartner();
+        }
+    }
+    
+    public function formDeletePartner() {
+        $this->javascript();
+        $user = session::getAccount(session::getUserId());
+        // echo "<h3></h3>";
+        echo helpers::confirmDeleteForm(
+                'delete_partner', "Du har en partner: '$user[username]'", 'Ophæv partnerskab');
+
+        if (isset($_POST['delete_partner'])) {
+            $this->updateFromForm(session::getUserId(), array('partner' => 0));
+            http::locationHeader(
+                    '/event/user/index', 'Skilsmisse fuldbyrdet. Du er løst fra din partner');
+        }
+        return;
+    }
+
+    public function formPartner () {
+                
         $ary = q::select('dancer')->filter('user_id =', session::getUserId())->fetchSingle();
-        
-        // echo ("User id: $ary[user_id]");
         $f = new html();
         $f->init($ary, 'submit', true);
         $f->formStart();
@@ -83,7 +125,6 @@ class module {
         $f->label('username', 'Dit navn');
         $f->text('username', $account['username'], $opt);
         
-        /*
         $sex = array (
             '0' => 'Vælg køn',
             '1' => 'Kvinde',
@@ -92,7 +133,7 @@ class module {
         
         $f->label('sex', 'Dit køn');
         $f->selectAry('sex', $sex);
-        */
+        
         $f->label('comment', 'Evt. kommentar');
         $f->textareaSmall('comment');
         
@@ -107,27 +148,27 @@ class module {
             }
             $rows[$partner['id']] = $partner['username'];
         }
-
-        $eDb = new eDb();
-        $partner = $eDb->getUserPairFromUserId(session::getUserId());
-        if (!empty($partner)) {   
-            $user = session::getAccount($ary['partner']);
-            $label = "Du har en partner: '$user[username]'"; 
-        } else {
-            $label = 'Har du en partner, så vælg en fra listen'; 
-        }
         
+        
+        $label = <<<EOF
+Har du en partner, så vælg en fra listen. 
+Når din partner har valgt dig, så udgør i et par, og i kan vælge en halv kvadrille 
+EOF;
         $f->label('partner', $label);
         $f->selectAry('partner', $rows);
-        
-        $f = $this->formAttachHalv ($f);
         
         $f->label('base');
         $f->submit('submit', 'Opdater');
         
         $f->formEnd();
         
-        return $f->getStr();    
+        echo $f->getStr(); 
+    }
+    
+    public function formHalv () {
+
+        
+        $f = $this->formAttachHalv ($f);
     }
     
     /**
@@ -154,9 +195,6 @@ EOF;
         if (!empty($halv)) {
             $label = "<hr />";
             $label.= "Halv kvadrille: <b>" . html::specialEncode($halv['name']) . "</b>";
-            // if ($halv['reserved'] == 1) {
-            //    $label.= " (reserveret)";
-            // }
             $label.= "<br />";
             $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
             $label.= html::createLink('/event/user/deletehalv', 'Slet');
@@ -167,25 +205,20 @@ EOF;
         }
         
         // User is invited and has confirmed
-        $halve = $eDb->getHalvUserInvites(session::getUserId(), 1);
+        $halve = $eDb->getHalvUserInvitesForDropDown(session::getUserId(), 1);
+        
         if (!empty($halve)) {
             $label = <<<EOF
 Du er en del af en halv kvadrille. Det kan være din partner som har valgt dig ind.
 Hvis du mener det er fejl kan du vælge 'Ingen kvadrille valgt'
 EOF;
-            //$label.= html::createLink('/event/user/deletehalv', 'Slet');
-            //$label.= "<hr />";
+            $f->label('halv', " $label ");
+            $f->selectAry('halv', $halve);
+            return $f;
         }
         
-        $halv = q::select('halv')->fetch();
-        $rows[0] = 'Ingen kvadrille valgt';
-        foreach ($halv as $a) {
-            $rows[$a['id']] = $a['name'];
-        }
-
         $label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
         $label.= html::createLink('/event/user/halv', 'opret en ny');
-        
         
         $f->label('halv', " $label ");
         $f->selectAry('halv', $rows);
