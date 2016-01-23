@@ -70,7 +70,7 @@ class module {
     public function javascript () { ?>
 <script>
 $(document).ready(function(){
-  $("#delete_partner").click(function(){
+  $("#delete_partner, #delete_halv, #delete_hel").click(function(){
     if (!confirm("Do you want to delete")){
       return false;
     }
@@ -165,8 +165,32 @@ EOF;
         
         echo $f->getStr(); 
     }
-
     
+    public function formHalvCreated() {
+
+        $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
+        $label = "<hr />";
+        $label.= "Halv kvadrille: <b>" . html::specialEncode($halv['name']) . "</b>";
+        $label.= "<br />";
+        $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
+        $label.= html::createLink('/event/user/deletehalv', 'Slet');
+        $label.= "<hr />";
+        echo $label;
+    }
+    
+    public function formDeleteHalv() {
+        
+
+        echo helpers::confirmDeleteForm(
+                'delete_halv', "Ophæv den halve kvadrille", 'Ophæv halv kvadrille');
+
+        if (isset($_POST['delete_halv'])) {
+            http::locationHeader(
+                    '/event/user/index', 'Kvadrille ophævet');
+        }
+        return;
+    }
+
     /**
      * 
      * @param Object $f \diversen\html
@@ -174,41 +198,32 @@ EOF;
      */
     public function formHalv() {
         
-        $ary = array ();
-        $f = new html();
-        $f->init($ary, 'submit', true);
-        $f->formStart();
-        $f->legend('Basis data - ret eller indsæt');
-        
+        echo "<h3>Halv kvadrille</h3>";
         $eDb = new eDb();
-        $partner = $eDb->getUserPairFromUserId(session::getUserId());
-
         
         // User has created 'halv'         
         $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
         if (!empty($halv)) {
-            $label = "<hr />";
-            $label.= "Halv kvadrille: <b>" . html::specialEncode($halv['name']) . "</b>";
-            $label.= "<br />";
-            $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
-            $label.= html::createLink('/event/user/deletehalv', 'Slet');
-            $label.= "<hr />";
-            $f->label('halv', $label);
-            $f->hidden('halv', $halv['id']);
-            return $f;
+            $this->formHalvCreated();
+            $this->formDeleteHalv();
+            return;
         }
         
-        // User is invited and has confirmed
-        $halve = $eDb->getHalvUserInvitesForDropDown(session::getUserId(), 1);
+        // Check if user is confirmed
+        $halv = $eDb->getHalvUserInvites(session::getUserId(), 1);
         
-        if (!empty($halve)) {
+        if (!empty($halv)) {
+
+            $halv_str = $eDb->getUsersStrFromHalv($halv['id']);
             $label = <<<EOF
-Du er en del af en halv kvadrille. Det kan være din partner som har valgt dig ind.
-Hvis du mener det er fejl kan du vælge 'Ingen kvadrille valgt'
+Du er en del af en halv kvadrille. <br />
+<b>$halv_str</b>
+Det kan være din partner som har valgt dig ind.<br />
+Hvis du mener det er fejl kan du slette den halve kvadrille.
 EOF;
-            $f->label('halv', " $label ");
-            $f->selectAry('halv', $halve);
-            echo $f->getStr();
+
+            echo $label;
+            $this->formDeleteHalv();
             return;
         }
         

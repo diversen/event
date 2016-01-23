@@ -186,22 +186,7 @@ EOF;
         $row = q::query($q)->fetchSingle();
         return $row;
     }
-    
-    /**
-     * @return array $row a single row
-     */
-    public function getHalvFromDancers($user_id, $ary) {
-        
-        $halv = $ary['halv'];
-        
-        // Get partner pair
-        $partner_pair = q::select('pair')->filter('id =', $halv)->fetchSingle();
-        
-        $user_a = q::select('dancer')->filter('user_id =', $partner_pair['user_a'])->fetchSingle();
-        // if ($user_a['halv'] == $)
-        
-        return $row;
-    }
+
 
     /**
      * Attach halvmembers
@@ -254,18 +239,28 @@ EOF;
     public function getHalvUserInvites ($user_id, $confirmed = 0) {
         $user_id = connect::$dbh->quote($user_id);
         
+        if ($confirmed == 1) {
+            $opt = "AND m.confirmed = $confirmed";
+        } else {
+            $opt = '';
+        }
+        
         $q = <<<EOF
 SELECT DISTINCT
     m.halv_id,
     h.id, h.name as title 
         FROM halvmember m, halv h 
-    WHERE m.halv_id = h.id AND m.user_id = $user_id AND m.confirmed = $confirmed AND m.halv_id IS NOT NULL
+    WHERE m.halv_id = h.id AND m.user_id = $user_id $opt  AND m.halv_id IS NOT NULL
 EOF;
+        
+        if ($confirmed) {
+            return q::query($q)->fetchSingle();
+        }
         return q::query($q)->fetch();
     }
     
-    public function getHalvUserInvitesForDropDown ($user_id, $confirmed = 0) {
-        $rows = $this->getHalvUserInvites($user_id, $confirmed);
+    public function getHalvUserInvitesForDropDown ($user_id) {
+        $rows = $this->getHalvUserInvites($user_id);
         $ary[] = 'Ingen kvadrille valgt';
         foreach ($rows as $val) {
             $title = $this->getUsersStrFromHalv($val['id']);
