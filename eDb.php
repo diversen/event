@@ -82,6 +82,19 @@ EOF;
 
     }
     
+        /**
+     * Delete 'halv' from user_id
+     * @param int $user_id
+     * @return boolean $res
+     */
+    public function deleteHalvFromId($id) {
+        
+        // Delete all 'halve' if user owns them
+        $halve = R::findAll('halv', 'id = ?', [$id]);
+        return R::trashAll($halve);
+
+    }
+    
     /**
      * Delete pairs with user
      * @param int $user_id
@@ -121,8 +134,8 @@ EOF;
     }
     
     /**
-     * Get other member of pair - based on session::getUserId
-     * @param int $id
+     * Get partners user id from a users id
+     * @param int $user_id
      * @return int $user_id
      */
     public function getPairPartnerUserId ($user_id) {
@@ -256,9 +269,10 @@ EOF;
         if ($confirmed) {
             return q::query($q)->fetchSingle();
         }
-        return q::query($q)->fetch();
+        return q::query($q)->fetchSingle();
     }
     
+    /*
     public function getHalvUserInvitesForDropDown ($user_id) {
         $rows = $this->getHalvUserInvites($user_id);
         $ary[] = 'Ingen kvadrille valgt';
@@ -267,7 +281,7 @@ EOF;
             $ary[$val['id']] = $title;
         }
         return $ary;
-    }
+    }*/
     
     /**
      * Get all users that belongs to a 'halv'

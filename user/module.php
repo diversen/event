@@ -99,8 +99,12 @@ $(document).ready(function(){
     
     public function formDeletePartner() {
         
+        $eDb = new eDb();
+        
+        $partner_id = $eDb->getPairPartnerUserId(session::getUserId());
+
         $this->javascript();
-        $user = session::getAccount(session::getUserId());
+        $user = session::getAccount($partner_id);
         echo helpers::confirmDeleteForm(
                 'delete_partner', "Du har en partner: '$user[username]'", 'Ophæv partnerskab');
 
@@ -169,18 +173,21 @@ EOF;
     public function formHalvCreated() {
 
         $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
+        
+        $e = new eDb();
+        $halv_str = $e->getUsersStrFromHalv($halv['id']);
+        
         $label = "<hr />";
-        $label.= "Halv kvadrille: <b>" . html::specialEncode($halv['name']) . "</b>";
+        $label.= "Halv kvadrille: <b>" . html::specialEncode($halv_str) . "</b>";
         $label.= "<br />";
         $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
-        $label.= html::createLink('/event/user/deletehalv', 'Slet');
+        // $label.= html::createLink('/event/user/deletehalv', 'Slet');
         $label.= "<hr />";
         echo $label;
     }
     
     public function formDeleteHalv() {
-        
-
+      
         echo helpers::confirmDeleteForm(
                 'delete_halv', "Ophæv den halve kvadrille", 'Ophæv halv kvadrille');
 
@@ -198,8 +205,21 @@ EOF;
      */
     public function formHalv() {
         
-        echo "<h3>Halv kvadrille</h3>";
         $eDb = new eDb();
+        //
+        
+        $halv = $eDb->getHalvUserInvites(session::getUserId());
+        
+        if (isset($_POST['delete_halv'])) {
+            //foreach ($halve as $halv) {
+                $eDb->deleteHalvFromId($halv['halv_id']);
+            //}
+            http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
+        }
+        
+        
+        echo "<h3>Halv kvadrille</h3>";
+        
         
         // User has created 'halv'         
         $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
@@ -209,17 +229,18 @@ EOF;
             return;
         }
         
-        // Check if user is confirmed
-        $halv = $eDb->getHalvUserInvites(session::getUserId(), 1);
-        
+        // Inviteret til at deltage i en halv
+        $halv = $eDb->getHalvUserInvites(session::getUserId());
         if (!empty($halv)) {
 
+            $users = $eDb->getUsersFromHalv($halv['id']);
+            print_r($users);
             $halv_str = $eDb->getUsersStrFromHalv($halv['id']);
             $label = <<<EOF
 Du er en del af en halv kvadrille. <br />
 <b>$halv_str</b>
 Det kan være din partner som har valgt dig ind.<br />
-Hvis du mener det er fejl kan du slette den halve kvadrille.
+Hvis du mener, at det er fejl kan du slette den halve kvadrille.
 EOF;
 
             echo $label;
@@ -227,9 +248,20 @@ EOF;
             return;
         }
         
-        $label = 'Er du en del af en halv kvadrille? Hvis ja, så vælg en fra listen eller ';
+        //$invites = $eDb->getHalvUserInvitesForDropDown(session::getUserId());
+        
+        //print_r($invites);
+        //return;
+        // Invitere par. 
+        $label = <<<EOF
+Du og din partner er endnu ikke en del af en halv kvadille
+Hvis i har en aftale med et par, så kan et af parene forme en halv
+kvadrille. Det andet par skal efterfølgende bekræfte den halve kvadrille.
+EOF;
         $label.= html::createLink('/event/user/halv', 'opret en ny');
         
+        echo $label; 
+            return;
         $f->label('halv', " $label ");
         $f->selectAry('halv', $rows);
         
@@ -249,9 +281,9 @@ EOF;
     public $errors = array ();
     
     public function validateHalv () {
-        if (empty($_POST['name'])) {
+        /*if (empty($_POST['name'])) {
             $this->errors[] = 'Indtast et navn';
-        }
+        }*/
         if ($_POST['pair'] == 0) {
             $this->errors[] = 'Du skal vælge et par som skal indgå i din halv kvadrille';
         }
@@ -274,7 +306,8 @@ EOF;
         if (isset($_POST['send'])) {
             $this->validateHalv();
             if (empty($this->errors)) {
-                $ary = db::prepareToPostArray(array('name', 'reserved', 'pair'), true);
+                /* 'name', 'reserved',  */
+                $ary = db::prepareToPostArray(array('pair'), true);
                 $eDb->createHalv($ary);
                 http::locationHeader('/event/user/index');
             } else {
@@ -284,7 +317,7 @@ EOF;
         echo $this->formCreateKvadrille();
     }
     
-        /**
+    /**
      * Form that creates a kvadrille
      * @param string $title
      * @return string $html
@@ -294,8 +327,8 @@ EOF;
         $f->init(array(), 'send', true);
         $f->formStart();
         $f->legend($title);
-        $f->label('name','Indtast et navn');
-        $f->text('name');
+        //$f->label('name','Indtast et navn');
+        //$f->text('name');
         
         $h = new eHelpers();
         $ary = $h->getFormPairsAry();
