@@ -108,7 +108,18 @@ EOF;
      * @return boolean $res
      */
     public function confirmHalvMembers($id) {
-        return q::update('halvmember')->values(array('confirmed' => 1))->filter('halv_id =', $id)->exec();
+        R::begin();
+        $bean = rb::getBean('halv', 'id', $id);
+        $bean->confirmed = 1;
+        R::store($bean);
+        q::update('halvmember')->values(array('confirmed' => 1))->filter('halv_id =', $id)->exec();
+        
+        if (R::commit()) {
+            return true;
+        } else {
+            R::rollback();
+            return false;
+        }
     }
     
     /**

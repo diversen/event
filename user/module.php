@@ -84,22 +84,34 @@ $(document).ready(function(){
      */
     public function formBase () {
                 
-        $eDb = new eDb();
-        $partner = $eDb->getUserPairFromUserId(session::getUserId());
+        $e = new eDb();
+        $partner = $e->getUserPairFromUserId(session::getUserId());
 
         if (!empty($partner)) {
             $this->formDeletePartner();
             $this->formHalv();
+
+            $halv = $e->getHalvUserInvites(session::getUserId());
+            $confirmed = $e->getHalvAllConfirmed($halv['id']);
+            if ($confirmed) {
+                $this->formHel();
+            }
+                
         } else {
             $this->formPartner();
         }
     }
-    
+
+    /**
+     * form that deletes a partner. 
+     * will also delete all 'halve'
+     * @return type
+     */
     public function formDeletePartner() {
         
-        $eDb = new eDb();
+        $e = new eDb();
         
-        $partner_id = $eDb->getPairPartnerUserId(session::getUserId());
+        $partner_id = $e->getPairPartnerUserId(session::getUserId());
 
         $this->javascript();
         $user = session::getAccount($partner_id);
@@ -108,13 +120,16 @@ $(document).ready(function(){
 
         if (isset($_POST['delete_partner'])) {
             $this->updateFromForm(session::getUserId(), array('partner' => 0));
-            $eDb->deleteHalvFromUserId(session::getUserId());
+            $e->deleteHalvFromUserId(session::getUserId());
             http::locationHeader(
                     '/event/user/index', 'Skilsmisse fuldbyrdet. Du er løst fra din partner');
         }
         return;
     }
 
+    /**
+     * for for selecting a partner
+     */
     public function formPartner () {
                 
         $ary = q::select('dancer')->filter('user_id =', session::getUserId())->fetchSingle();
@@ -169,54 +184,42 @@ EOF;
         echo $f->getStr(); 
     }
     
-    public function formHalvCreated() {
-
-        $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
         
-        $e = new eDb();
-        $halv_str = $e->getUsersStrFromHalv($halv['id']);
-        
-        $label = "<hr />";
-        $label.= "Halv kvadrille: <b>" . html::specialEncode($halv_str) . "</b>";
-        $label.= "<br />";
-        $label.= "Du har oprettet denne halv kvadrille, og du er derfor en del af den. ";
-        // $label.= html::createLink('/event/user/deletehalv', 'Slet');
-        $label.= "<hr />";
-        echo $label;
-    }
-    
+    /**
+     * form which will confirm other pair in 'halv'
+     * @param type $id
+     * @return type
+     */
     public function formConfirmHalv($id) {
       
         echo helpers::confirmDeleteForm(
                 'confirm_halv', "", 'Bekræft halv kvadrille', $id);
 
-        if (isset($_POST['delete_halv'])) {
-            http::locationHeader(
-                    '/event/user/index', 'Kvadrille ophævet');
-        }
-        return;
     }
 
 
+    public function formHel () {
+        echo "OK";
+    }
+    
     /**
-     * 
-     * @param Object $f \diversen\html
+     * Form for creating a halv
      * @return type
      */
     public function formHalv() {
         
-        $eDb = new eDb();
+        $e = new eDb();
         
         // Get halv invite
-        $halv = $eDb->getHalvUserInvites(session::getUserId());
+        $halv = $e->getHalvUserInvites(session::getUserId());
         
         if (isset($_POST['delete_halv'])) {
-            $eDb->deleteHalvFromId($halv['halv_id']);
+            $e->deleteHalvFromId($halv['halv_id']);
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
         }
         
         if (isset($_POST['confirm_halv'])) {
-            $eDb->confirmHalvMembers($halv['halv_id']);
+            $e->confirmHalvMembers($halv['halv_id']);
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev bekræftet');
         }
         
@@ -224,12 +227,12 @@ EOF;
         echo "<h3>Halv kvadrille</h3>";
         
         // Inviteret til at deltage i en halv
-        $halv = $eDb->getHalvUserInvites(session::getUserId());
+        $halv = $e->getHalvUserInvites(session::getUserId());
         if (!empty($halv)) {
 
-            $user = $eDb->getSingleUserFromHalv($halv['id'], session::getUserId());
-            $halv_str = $eDb->getUsersStrFromHalv($halv['id']);
-            $all_confirmed = $eDb->getHalvAllConfirmed($halv['id']);
+            $user = $e->getSingleUserFromHalv($halv['id'], session::getUserId());
+            $halv_str = $e->getUsersStrFromHalv($halv['id']);
+            $all_confirmed = $e->getHalvAllConfirmed($halv['id']);
             
             if ($user['confirmed'] == 0) {
 $confirm_mes = <<<EOF
@@ -239,7 +242,7 @@ Du og din partner har endnu ikke bekræftet. Vælg bekræft eller
 slet den halve kvadrille.
 EOF;
                 echo $confirm_mes;
-                echo $this->formConfirmHalv($halv['id']);
+                $this->formConfirmHalv($halv['id']);
             } else {
                 $message = <<<EOF
 Du er en del af en halv kvadrille. <br />
@@ -306,13 +309,27 @@ EOF;
             http::locationHeader('/event/user/index', 'Du skal have en partner for at oprette en halv kvadrille');
         }
         
+        
         http::prg();
         if (isset($_POST['send'])) {
             $this->validateHalv();
             if (empty($this->errors)) {
-                /* 'name', 'reserved',  */
+                    
+                // Prepare
                 $ary = db::prepareToPostArray(array('pair'), true);
-                $eDb->createHalv($ary);
+                
+                // Delete other halve
+                $eDb->deleteHalvFromUserId(session::getUserId());
+                
+                // Create
+                $id = $eDb->createHalv($ary);
+                
+                // Set a better name
+                $name = $eDb->getUsersStrFromHalv($id);
+                $bean = rb::getBean('halv', 'id', $id);
+                $bean->name = $name;
+                R::store($bean);
+                
                 http::locationHeader('/event/user/index');
             } else {
                 echo html::getErrors($this->errors);
