@@ -23,16 +23,17 @@ class eDb {
      * @return array $rows
      */
     public function getAllPairsFromDancers() {
-        
-        $q = <<<EOF
-SELECT DISTINCT
-    CASE WHEN a.user_id > b.user_id THEN a.user_id ELSE b.user_id END as a,
-    CASE WHEN a.user_id > b.user_id THEN b.user_id ELSE a.user_id END as b 
-        FROM dancer a, dancer b 
-    WHERE a.user_id = b.partner AND a.partner = b.user_id;
-EOF;
-
         $q = "SELECT * FROM pair";
+        $rows = q::query($q)->fetch();
+        return $rows;
+    }
+    
+    /**
+     * Get all halve
+     * @return type
+     */
+    public function getAllHalve ($user_id) {
+        echo $q = "SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL )";
         $rows = q::query($q)->fetch();
         return $rows;
     }
@@ -78,7 +79,6 @@ EOF;
 
         $user_id = connect::$dbh->quote($user_id);
         $q = "SELECT DISTINCT(halv_id) FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL";
-        
        
         $halve = q::query($q)->fetch();
         
@@ -89,9 +89,28 @@ EOF;
         }
     }
     
-        /**
-     * Delete 'halv' from user_id
+    
+    /**
+     * Delete 'hel' from user_id
      * @param int $user_id
+     * @return boolean $res
+     */
+    public function deleteHelFromUserId($user_id) {
+
+        $user_id = connect::$dbh->quote($user_id);
+        $q = "SELECT DISTINCT(hel_id) FROM helmember WHERE user_id = $user_id AND hel_id IS NOT NULL";
+       
+        $hele = q::query($q)->fetch(); 
+        foreach ($hele as $hel) {
+            // Delete all 'halve' if user owns them
+            $hel = R::findOne('hel', 'id = ?', [$hel['hel_id']]);
+            R::trash($hel);
+        }
+    }
+    
+    /**
+     * Delete 'halv' from user_id
+     * @param int $id user_id
      * @return boolean $res
      */
     public function deleteHalvFromId($id) {
@@ -102,9 +121,24 @@ EOF;
 
     }
     
-    /**
-     * Delete 'halv' from user_id
+    
+     /**
+     * Delete 'hel' from user_id
      * @param int $user_id
+     * @return boolean $res
+     */
+    public function deleteHelFromId($id) {
+        
+        // Delete all 'hel' if user owns them
+        $hele = R::findAll('hel', 'id = ?', [$id]);
+        return R::trashAll($hele);
+
+    }
+    
+    
+    /**
+     * Confirm 'halv' by user_id
+     * @param int $id
      * @return boolean $res
      */
     public function confirmHalvMembers($id) {
@@ -113,6 +147,26 @@ EOF;
         $bean->confirmed = 1;
         R::store($bean);
         q::update('halvmember')->values(array('confirmed' => 1))->filter('halv_id =', $id)->exec();
+        
+        if (R::commit()) {
+            return true;
+        } else {
+            R::rollback();
+            return false;
+        }
+    }
+    
+    /**
+     * Confirm 'hel' by user_id
+     * @param int $id
+     * @return boolean $res
+     */
+    public function confirmHelMembers($id) {
+        R::begin();
+        $bean = rb::getBean('hel', 'id', $id);
+        $bean->confirmed = 1;
+        R::store($bean);
+        q::update('helmember')->values(array('confirmed' => 1))->filter('hel_id =', $id)->exec();
         
         if (R::commit()) {
             return true;
@@ -141,7 +195,6 @@ EOF;
 
     }
 
-    
     /**
      * Return a pair from user_id
      * @param int $user_id
@@ -149,6 +202,18 @@ EOF;
      */
     public function getUserPairFromUserId ($user_id) {
         return q::select('pair')->filter('user_a =', $user_id)->condition('OR')->filter('user_b =', $user_id)->fetchSingle();
+    }
+    
+    /**
+     * Return a pair from user_id
+     * @param int $user_id
+     * @return array $row
+     */
+    public function getUserHalvFromUserId ($user_id) {
+        $halv = $this->getHalvUserInvites($user_id, 1);
+        return $halv;
+        
+        // return q::select('halv')->filter('confirmed =', 1)->condition('AND')->filter('user_id =', $user_id)->fetchSingle();
     }
     
     /**
@@ -272,7 +337,42 @@ EOF;
     }
     
     /**
-     * Get 'halve' where user is invited
+     * Attach halvmembers
+     * @param object $hel
+     * @param array $ary
+     * @return object $halv 
+     */
+    public function attachMembersForHel ($hel, $ary) {
+        
+        $e = new eDb();
+        $users_a = $e->getUsersFromHalv($ary['halv']);
+        $my_halv = $e->getUserHalvFromUserId(session::getUserId());
+        $users_b = $e->getUsersFromHalv($my_halv['id']);
+        
+        $hel->xownMemberList = array();
+        foreach($users_a as $user) {
+            
+            // Owner is a member but not confirmed
+            $member = R::dispense('helmember');
+            $member->user_id = $user['user_id'];
+            $member->confirmed = 0;
+            $hel->xownMemberList[] = $member;
+        }
+        
+        foreach($users_b as $user) {
+            
+            // Owner is a member but not confirmed
+            $member = R::dispense('helmember');
+            $member->user_id = $user['user_id'];
+            $member->confirmed = 1;
+            $hel->xownMemberList[] = $member;
+        }
+        
+        return $hel;
+    }
+    
+    /**
+     * Get 'hel' where user is invited
      * @param int $user_id
      * @param int $confirmed
      * @return array $row
@@ -289,23 +389,39 @@ EOF;
         $q = <<<EOF
 SELECT DISTINCT
     m.halv_id,
-    h.id, h.name as title 
+    h.id, h.name, h.confirmed as confirmed 
         FROM halvmember m, halv h 
     WHERE m.halv_id = h.id AND m.user_id = $user_id $opt  AND m.halv_id IS NOT NULL
 EOF;
         return q::query($q)->fetchSingle();
     }
     
-    /*
-    public function getHalvUserInvitesForDropDown ($user_id) {
-        $rows = $this->getHalvUserInvites($user_id);
-        $ary[] = 'Ingen kvadrille valgt';
-        foreach ($rows as $val) {
-            $title = $this->getUsersStrFromHalv($val['id']);
-            $ary[$val['id']] = $title;
+    
+    /**
+     * Get 'halve' where user is invited
+     * @param int $user_id
+     * @param int $confirmed
+     * @return array $row
+     */
+    public function getHelUserInvites ($user_id, $confirmed = 0) {
+        $user_id = connect::$dbh->quote($user_id);
+        
+        if ($confirmed == 1) {
+            $opt = "AND m.confirmed = $confirmed";
+        } else {
+            $opt = '';
         }
-        return $ary;
-    }*/
+        
+        $q = <<<EOF
+SELECT DISTINCT
+    m.hel_id,
+    h.id, h.name as title 
+        FROM helmember m, hel h 
+    WHERE m.hel_id = h.id AND m.user_id = $user_id $opt  AND m.hel_id IS NOT NULL
+EOF;
+        return q::query($q)->fetchSingle();
+    }
+
     
     /**
      * Get all users that belongs to a 'halv'
@@ -317,6 +433,15 @@ EOF;
     }
     
     /**
+     * Get all users that belongs to a 'hel'
+     * @param int $halv
+     * @return array $rows
+     */
+    public function getUsersFromHel($id) {
+        return q::select('helmember')->filter('hel_id =', $id)->fetch();
+    }
+    
+    /**
      * Get all users that belongs to a 'halv'
      * @param int $halv
      * @return array $rows
@@ -324,6 +449,18 @@ EOF;
     public function getSingleUserFromHalv($id, $user_id) {
         return q::select('halvmember')->
                 filter('halv_id =', $id)->condition('AND')->
+                filter('user_id =', $user_id)->fetchSingle();
+    }
+    
+        
+    /**
+     * Get all users that belongs to a 'halv'
+     * @param int $halv
+     * @return array $rows
+     */
+    public function getSingleUserFromHel($id, $user_id) {
+        return q::select('helmember')->
+                filter('hel_id =', $id)->condition('AND')->
                 filter('user_id =', $user_id)->fetchSingle();
     }
     
@@ -344,12 +481,31 @@ EOF;
     }
     
     /**
+     * Get a readable string of users in a 'hel'
+     * @param int $hel
+     * @return string $str
+     */
+    public function getUsersStrFromHel($hel) {
+        $users = $this->getUsersFromHel($hel);
+        $ary = [];
+        foreach($users as $user) {
+            $account = session::getAccount($user['user_id']);
+            $ary[] = $account['username'];
+        }
+        return implode(' - ', $ary);
+    }
+    
+    /**
      * Checks if all users in a halv is confirmed
      * @param int $halv
      * @return boolean $res
      */
     public function getHalvAllConfirmed($halv) {
-        $users = $this->getUsersFromHalv($halv);
+        if (empty($halv)) {
+            return false;
+        }
+        
+        $users = $this->getUsersFromHalv($halv['id']);
         foreach($users as $user) {
             if ($user['confirmed'] == 0) {
                 return false;
@@ -358,8 +514,20 @@ EOF;
         return true;
     }
     
-    
-    
+    /**
+     * Checks if all users in a hel is confirmed
+     * @param int $hel
+     * @return boolean $res
+     */
+    public function getHelAllConfirmed($halv) {
+        $users = $this->getUsersFromHel($halv);
+        foreach($users as $user) {
+            if ($user['confirmed'] == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
     
     /**
      * Create a 'halv' and all 'halvmembers'
@@ -367,7 +535,6 @@ EOF;
      * @return boolean $res result from R::store
      */
     public function createHalv($ary) {
-        
         
         // create halv
         $halv = rb::getBean('halv');
@@ -378,5 +545,23 @@ EOF;
         // Attach all 4 members
         $halv = $this->attachMembersForHalv($halv, $ary);
         return R::store($halv);
+    }
+    
+    /**
+     * Create a 'hel' and all 'helmembers'
+     * @param array $ary _POST
+     * @return boolean $res result from R::store
+     */
+    public function createHel($ary) {
+        
+        // create halv
+        $hel = rb::getBean('hel');
+        //$hel->name = html::specialDecode($ary['name']);
+        //$hel->reserved = html::specialDecode($ary['reserved']);
+        $hel->user_id = session::getUserId();
+        
+        // Attach all 4 members
+        $hel = $this->attachMembersForHel($hel, $ary);
+        return R::store($hel);
     }
 }
