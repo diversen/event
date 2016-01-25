@@ -75,11 +75,18 @@ EOF;
      * @return boolean $res
      */
     public function deleteHalvFromUserId($user_id) {
-        
-        // Delete all 'halve' if user owns them
-        $halve = R::findAll('halv', 'user_id = ?', [$user_id]);
-        return R::trashAll($halve);
 
+        $user_id = connect::$dbh->quote($user_id);
+        $q = "SELECT DISTINCT(halv_id) FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL";
+        
+       
+        $halve = q::query($q)->fetch();
+        
+        foreach ($halve as $halv) {
+            // Delete all 'halve' if user owns them
+            $halv = R::findOne('halv', 'id = ?', [$halv['halv_id']]);
+            R::trash($halv);
+        }
     }
     
         /**
@@ -93,6 +100,15 @@ EOF;
         $halve = R::findAll('halv', 'id = ?', [$id]);
         return R::trashAll($halve);
 
+    }
+    
+    /**
+     * Delete 'halv' from user_id
+     * @param int $user_id
+     * @return boolean $res
+     */
+    public function confirmHalvMembers($id) {
+        return q::update('halvmember')->values(array('confirmed' => 1))->filter('halv_id =', $id)->exec();
     }
     
     /**
@@ -247,7 +263,8 @@ EOF;
     /**
      * Get 'halve' where user is invited
      * @param int $user_id
-     * @return array $rows
+     * @param int $confirmed
+     * @return array $row
      */
     public function getHalvUserInvites ($user_id, $confirmed = 0) {
         $user_id = connect::$dbh->quote($user_id);
@@ -265,10 +282,6 @@ SELECT DISTINCT
         FROM halvmember m, halv h 
     WHERE m.halv_id = h.id AND m.user_id = $user_id $opt  AND m.halv_id IS NOT NULL
 EOF;
-        
-        if ($confirmed) {
-            return q::query($q)->fetchSingle();
-        }
         return q::query($q)->fetchSingle();
     }
     
@@ -288,11 +301,27 @@ EOF;
      * @param int $halv
      * @return array $rows
      */
-    public function getUsersFromHalv($halv) {
-        return q::select('halvmember')->filter('halv_id =', $halv)->fetch();
+    public function getUsersFromHalv($id) {
+        return q::select('halvmember')->filter('halv_id =', $id)->fetch();
+    }
+    
+    /**
+     * Get all users that belongs to a 'halv'
+     * @param int $halv
+     * @return array $rows
+     */
+    public function getSingleUserFromHalv($id, $user_id) {
+        return q::select('halvmember')->
+                filter('halv_id =', $id)->condition('AND')->
+                filter('user_id =', $user_id)->fetchSingle();
     }
     
     
+    /**
+     * Get a readable string of users in a halv
+     * @param int $halv
+     * @return string $str
+     */
     public function getUsersStrFromHalv($halv) {
         $users = $this->getUsersFromHalv($halv);
         $ary = [];
@@ -302,6 +331,22 @@ EOF;
         }
         return implode(' - ', $ary);
     }
+    
+    /**
+     * Checks if all users in a halv is confirmed
+     * @param int $halv
+     * @return boolean $res
+     */
+    public function getHalvAllConfirmed($halv) {
+        $users = $this->getUsersFromHalv($halv);
+        foreach($users as $user) {
+            if ($user['confirmed'] == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     
     
     

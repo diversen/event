@@ -36,9 +36,8 @@ class module {
      * @return void
      */
     public function indexAction () {
-        $this->checkAccess();
-
         
+        $this->checkAccess();
         if (isset($_POST['submit'])) {
             
             $user_id = session::getUserId();
@@ -46,7 +45,6 @@ class module {
             // Update base info
             $ary = db::prepareToPost();
             $this->updateFromForm($user_id, $ary);
-
             http::locationHeader('/event/user/index', 'Dine data blev opdateret');
 
         }
@@ -110,6 +108,7 @@ $(document).ready(function(){
 
         if (isset($_POST['delete_partner'])) {
             $this->updateFromForm(session::getUserId(), array('partner' => 0));
+            $eDb->deleteHalvFromUserId(session::getUserId());
             http::locationHeader(
                     '/event/user/index', 'Skilsmisse fuldbyrdet. Du er løst fra din partner');
         }
@@ -186,10 +185,10 @@ EOF;
         echo $label;
     }
     
-    public function formDeleteHalv() {
+    public function formConfirmHalv($id) {
       
         echo helpers::confirmDeleteForm(
-                'delete_halv', "Ophæv den halve kvadrille", 'Ophæv halv kvadrille');
+                'confirm_halv', "", 'Bekræft halv kvadrille', $id);
 
         if (isset($_POST['delete_halv'])) {
             http::locationHeader(
@@ -197,6 +196,7 @@ EOF;
         }
         return;
     }
+
 
     /**
      * 
@@ -206,53 +206,63 @@ EOF;
     public function formHalv() {
         
         $eDb = new eDb();
-        //
         
+        // Get halv invite
         $halv = $eDb->getHalvUserInvites(session::getUserId());
         
         if (isset($_POST['delete_halv'])) {
-            //foreach ($halve as $halv) {
-                $eDb->deleteHalvFromId($halv['halv_id']);
-            //}
+            $eDb->deleteHalvFromId($halv['halv_id']);
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
+        }
+        
+        if (isset($_POST['confirm_halv'])) {
+            $eDb->confirmHalvMembers($halv['halv_id']);
+            http::locationHeader('/event/user/index', 'Den halve kvadrille blev bekræftet');
         }
         
         
         echo "<h3>Halv kvadrille</h3>";
         
-        
-        // User has created 'halv'         
-        $halv = q::select('halv')->filter('user_id =', session::getUserId())->fetchSingle();
-        if (!empty($halv)) {
-            $this->formHalvCreated();
-            $this->formDeleteHalv();
-            return;
-        }
-        
         // Inviteret til at deltage i en halv
         $halv = $eDb->getHalvUserInvites(session::getUserId());
         if (!empty($halv)) {
 
-            $users = $eDb->getUsersFromHalv($halv['id']);
-            print_r($users);
+            $user = $eDb->getSingleUserFromHalv($halv['id'], session::getUserId());
             $halv_str = $eDb->getUsersStrFromHalv($halv['id']);
-            $label = <<<EOF
+            $all_confirmed = $eDb->getHalvAllConfirmed($halv['id']);
+            
+            if ($user['confirmed'] == 0) {
+$confirm_mes = <<<EOF
+Du er en del af en <b>ubekræftet</b> halv kvadrille. <br />
+<b>$halv_str</b>
+Du og din partner har endnu ikke bekræftet. Vælg bekræft eller
+slet den halve kvadrille.
+EOF;
+                echo $confirm_mes;
+                echo $this->formConfirmHalv($halv['id']);
+            } else {
+                $message = <<<EOF
 Du er en del af en halv kvadrille. <br />
 <b>$halv_str</b>
 Det kan være din partner som har valgt dig ind.<br />
-Hvis du mener, at det er fejl kan du slette den halve kvadrille.
+Hvis du mener at det er fejl kan du slette den halve kvadrille.
+                        
 EOF;
+                
+                
+                if (!$all_confirmed) {
+                    $message.= '<br />Jeres halv-kvadrille partnere har <b>endnu ikke</b> bekræftet!';
+                } else {
+                    $message.= '<br />Jeres halv-kvadrille partnere har bekræftet!';
+                }
+                echo $message;
+            }
 
-            echo $label;
-            $this->formDeleteHalv();
+            echo helpers::confirmDeleteForm(
+                'delete_halv', "", 'Ophæv halv kvadrille', $halv['id']);
             return;
         }
-        
-        //$invites = $eDb->getHalvUserInvitesForDropDown(session::getUserId());
-        
-        //print_r($invites);
-        //return;
-        // Invitere par. 
+
         $label = <<<EOF
 Du og din partner er endnu ikke en del af en halv kvadille
 Hvis i har en aftale med et par, så kan et af parene forme en halv
@@ -261,18 +271,12 @@ EOF;
         $label.= html::createLink('/event/user/halv', 'opret en ny');
         
         echo $label; 
-            return;
-        $f->label('halv', " $label ");
-        $f->selectAry('halv', $rows);
-        
-        $f->label('base');
-        $f->submit('submit', 'Opdater');
-        
-        $f->formEnd();
-        echo $f->getStr();
-        // return $f;
+        return;
+
         
     }
+    
+    
     
     /**
      * var holding form submission errors
