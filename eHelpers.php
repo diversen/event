@@ -42,22 +42,9 @@ class eHelpers {
         $eDb = new eDb();
         $halve = $eDb->getAllHalve(session::getUserId());
         
-        print_r($halve);
-        
         $ary = [];
         $ary[0] = 'Ingen halv valgt';
         foreach ($halve as $halv) {
-            //$a = session::getAccount($pair['user_a']);
-            //$b = session::getAccount($pair['user_b']);
-            
-            //if ($a['id'] == session::getUserId()) {
-            //    continue;
-            //}
-            //if ($b['id'] == session::getUserId()) {
-            //    continue;
-            //}
-            
-            //$pair_str = $a['username'] . ' - ' . $b['username'];
             $ary[$halv['id']] = $halv['name'];
         }
         return $ary;

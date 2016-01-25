@@ -215,22 +215,17 @@ EOF;
         
         // Get halv invite
         $hel = $e->getHelUserInvites(session::getUserId());
-        
-                
-        // print_r($hel);
+
         if (isset($_POST['delete_hel'])) {
-            //print_r($_POST);
-            //die;
             $e->deleteHelFromId($hel['hel_id']);
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
         }
         
         if (isset($_POST['confirm_hel'])) {
-            $e->confirmHelMembers($halv['hel_id']);
+            $e->confirmHelMembers($hel['hel_id']);
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev bekræftet');
         }
-        
-        
+                
         echo "<h3>Hel kvadrille</h3>";
         
         // Inviteret til at deltage i en halv

@@ -33,7 +33,7 @@ class eDb {
      * @return type
      */
     public function getAllHalve ($user_id) {
-        echo $q = "SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL )";
+        $q = "SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL )";
         $rows = q::query($q)->fetch();
         return $rows;
     }
