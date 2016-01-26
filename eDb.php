@@ -29,10 +29,11 @@ class eDb {
     }
     
     /**
-     * Get all halve
+     * Get all halve except halve where user is in
      * @return type
      */
     public function getAllHalve ($user_id) {
+        $user_id = connect::$dbh->quote($user_id);
         $q = "SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL )";
         $rows = q::query($q)->fetch();
         return $rows;
@@ -102,7 +103,7 @@ class eDb {
        
         $hele = q::query($q)->fetch(); 
         foreach ($hele as $hel) {
-            // Delete all 'halve' if user owns them
+            // Delete all 'hele' if user is part of them them
             $hel = R::findOne('hel', 'id = ?', [$hel['hel_id']]);
             R::trash($hel);
         }
@@ -114,6 +115,13 @@ class eDb {
      * @return boolean $res
      */
     public function deleteHalvFromId($id) {
+        
+        
+        // Only allow members to delete from hel.
+        $row = $this->getSingleUserFromHalv($id, session::getUserId());
+        if (empty($row)) {
+            return false;
+        }
         
         // Delete all 'halve' if user owns them
         $halve = R::findAll('halv', 'id = ?', [$id]);
@@ -128,6 +136,12 @@ class eDb {
      * @return boolean $res
      */
     public function deleteHelFromId($id) {
+        
+        // Only allow members to delete from hel.
+        $row = $this->getSingleUserFromHel($id, session::getUserId());
+        if (empty($row)) {
+            return false;
+        }
         
         // Delete all 'hel' if user owns them
         $hele = R::findAll('hel', 'id = ?', [$id]);
@@ -205,15 +219,23 @@ class eDb {
     }
     
     /**
-     * Return a pair from user_id
+     * Return a 'halv' from user_id
      * @param int $user_id
      * @return array $row
      */
     public function getUserHalvFromUserId ($user_id) {
         $halv = $this->getHalvUserInvites($user_id, 1);
         return $halv;
-        
-        // return q::select('halv')->filter('confirmed =', 1)->condition('AND')->filter('user_id =', $user_id)->fetchSingle();
+    }
+    
+    /**
+     * Return a confirmed 'hel' from user_id
+     * @param int $user_id
+     * @return array $row
+     */
+    public function getUserHelFromUserId ($user_id) {
+        $hel = $this->getHelUserInvites($user_id, 1);
+        return $hel;
     }
     
     /**

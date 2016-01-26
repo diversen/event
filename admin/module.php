@@ -35,17 +35,39 @@ class module {
             $this->displayPairs($rows);
         }
         
+        if (isset($_GET['halv'])) {
+            
+            $q = "SELECT * FROM halv WHERE confirmed = 1";
+            $rows = q::query($q)->fetch();
+            $this->displayHalve($rows);
+        }
+        
+        if (isset($_GET['hel'])) {
+            
+            $q = "SELECT * FROM hel WHERE confirmed = 1";
+            $rows = q::query($q)->fetch();
+            $this->displayHele($rows);
+        }
+        
         if (isset($_GET['reg_minus'])) {
+            
+            echo $this->message("Brugere som er importeret, men som endnu ikke har foretaget en opdatering på sitet.");
             $q = "select * from account where id NOT IN (select user_id from dancer) AND admin = 0 ORDER by username";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
         
         if (isset($_GET['uden'])) {
+            
+            echo $this->message("Brugere som er importeret, og som har noteret sig som 'Uden partner'.");
             $q = "select * from account where id IN (select user_id from dancer where partner = 0) AND admin = 0 ORDER by username";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
+    }
+    
+    public function message($mes) {
+        echo $mes . "<br />";
     }
     
     public function displayPairs ( $rows ) {
@@ -54,9 +76,35 @@ class module {
             $a = session::getAccount($row['user_a']);
             $b = session::getAccount($row['user_b']);
             $str.=table::trBegin();
-            $str.=table::td($a['username'], array ('class' => 'uk-width-3-10 uk-text-bold'));
-            $str.=table::td($b['username'], array ('class' => 'uk-text-bold'));
+            $str.=table::td($a['username'], array ('class' => 'uk-width-3-10'));
+            $str.=table::td($b['username'], array ('class' => ''));
             //$str.=table::td($a['email']);
+            $str.=table::trEnd();   
+        }
+        $str.=table::tableEnd();
+        echo $str;
+        
+        
+    }
+    
+    public function displayHalve ( $rows ) {
+        $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));
+        foreach($rows as $row) {
+            $str.=table::trBegin();
+            $str.=table::td($row['name']);
+            $str.=table::trEnd();   
+        }
+        $str.=table::tableEnd();
+        echo $str;
+        
+        
+    }
+    
+    public function displayHele ( $rows ) {
+        $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));
+        foreach($rows as $row) {
+            $str.=table::trBegin();
+            $str.=table::td($row['name']);
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();
@@ -71,7 +119,7 @@ class module {
         $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));
         foreach($rows as $row) {
             $str.=table::trBegin();
-            $str.=table::td($row['username'], array ('class' => 'uk-width-3-10 uk-text-bold'));
+            $str.=table::td($row['username'], array ('class' => 'uk-width-3-10'));
             $str.=table::td($row['email']);
             $str.=table::trEnd();   
         }
@@ -80,6 +128,9 @@ class module {
     }
     
     public function importAction () {
+        
+        $this->checkAccess(); 
+        
         echo "I den følgende form kan du indsætte brugere. <br />";
         echo $this->importForm();
         

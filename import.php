@@ -28,6 +28,7 @@ class import {
             $b = rb::getBean('account', 'email', $val[1]);
             $b->username = $val[0];
             $b->email = $val[1];
+            $b->type = 'email';
             rb::commitBean($b);
         }
     }

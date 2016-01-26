@@ -7,7 +7,6 @@ use diversen\db\q;
 use diversen\db\rb;
 use diversen\html;
 use diversen\http;
-use diversen\log;
 use diversen\moduleloader;
 use diversen\session;
 use diversen\user;
@@ -120,8 +119,17 @@ $(document).ready(function(){
                 'delete_partner', "Du har en partner: '$user[username]'", 'Ophæv partnerskab');
 
         if (isset($_POST['delete_partner'])) {
+            
+            // Update pair - delete partner
             $this->updateFromForm(session::getUserId(), array('partner' => 0));
+            
+            // Delete halve 
             $e->deleteHalvFromUserId(session::getUserId());
+            
+            // Delete hele
+            $e->deleteHelFromUserId(session::getUserId());
+            
+            // Location
             http::locationHeader(
                     '/event/user/index', 'Skilsmisse fuldbyrdet. Du er løst fra din partner');
         }
@@ -217,7 +225,9 @@ EOF;
         $hel = $e->getHelUserInvites(session::getUserId());
 
         if (isset($_POST['delete_hel'])) {
-            $e->deleteHelFromId($hel['hel_id']);
+            
+            // Delete hele
+            $e->deleteHelFromUserId(session::getUserId());
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
         }
         
@@ -290,8 +300,15 @@ EOF;
         $halv = $e->getHalvUserInvites(session::getUserId());
         
         if (isset($_POST['delete_halv'])) {
-            $e->deleteHalvFromId($halv['halv_id']);
+            
+            // Delete halve 
+            $e->deleteHalvFromUserId(session::getUserId());
+            
+            // Delete hele
+            $e->deleteHelFromUserId(session::getUserId());
+            
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
+            
         }
         
         if (isset($_POST['confirm_halv'])) {
