@@ -84,6 +84,11 @@ $(document).ready(function(){
     public function formBase () {
                 
         $e = new eDb();
+        
+        $me = session::getAccount(session::getUserId());
+        
+        
+        echo "<h3>Du er: $me[username]</h3>";
         $partner = $e->getUserPairFromUserId(session::getUserId());
 
         if (!empty($partner)) {
