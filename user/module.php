@@ -88,7 +88,7 @@ $(document).ready(function(){
         $me = session::getAccount(session::getUserId());
         
         
-        echo "<h3>Du er: $me[username]</h3>";
+        echo "<h3>Du er: '$me[username]'</h3>";
         $partner = $e->getUserPairFromUserId(session::getUserId());
 
         if (!empty($partner)) {
