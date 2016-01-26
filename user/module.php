@@ -152,7 +152,7 @@ $(document).ready(function(){
         $f->formStart();
         $f->legend('Basis data - ret eller indsæt');
         
-        $account = user::getAccount();
+        $account = user::getAccount(session::getUserId());
         
         $opt = array ('disabled' => 'disabled');
         $f->label('username', 'Dit navn');
@@ -255,8 +255,8 @@ EOF;
 $confirm_mes = <<<EOF
 Du er en del af en <b>ubekræftet</b> hel kvadrille. <br />
 <b>$hel_str</b>
-Du og din partner har endnu ikke bekræftet. Vælg bekræft eller
-slet den halve kvadrille.
+Du og din halve kvadrille har endnu ikke bekræftet. Vælg bekræft eller
+slet den hele kvadrille.
 EOF;
                 echo $confirm_mes;
                 $this->formConfirmHel($hel['id']);
@@ -264,8 +264,8 @@ EOF;
                 $message = <<<EOF
 Du er en del af en hel kvadrille. <br />
 <b>$hel_str</b>
-Det kan være din partner som har valgt dig ind.<br />
-Hvis du mener at det er fejl kan du slette den hele kvadrille.
+Det kan være en person fra din halve kvadrille, som har valgt dig ind.<br />
+Hvis du mener at det er fejl, kan du slette den hele kvadrille.
                         
 EOF;
                 

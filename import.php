@@ -24,12 +24,21 @@ class import {
     public function addToDb ($ary) {
         
         foreach($ary as $val) {
-            //R::begin();
             $b = rb::getBean('account', 'email', $val[1]);
             $b->username = $val[0];
             $b->email = $val[1];
             $b->type = 'email';
             rb::commitBean($b);
         }
+        
+        foreach($ary as $val) {
+            
+            $b = rb::getBean('allowed', 'email', $val[1]);
+            $b->username = $val[0];
+            $b->email = $val[1];
+            $b->type = 'email';
+            rb::commitBean($b);
+        }
+        
     }
 }
