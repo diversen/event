@@ -66,10 +66,23 @@ class module {
 <script>
 $(document).ready(function(){
   $("#delete_partner, #delete_halv, #delete_hel").click(function(){
-    if (!confirm("Do you want to delete")){
+    if (!confirm("Er du sikker på, at du vil bryde dit par? Eventuelle halve og hele kvadriller vil ligeledes blive brudt")){
       return false;
     }
   });
+  
+  $("#delete_halv").click(function(){
+    if (!confirm("Er du sikker på, at du vil bryde den halve kvadrille? En evt helt kvadrille vil ligeledes blive brudt.")){
+      return false;
+    }
+  });
+  
+  $("#delete_hel").click(function(){
+    if (!confirm("Er du sikker på, at du vil bryde den hele kvadrille?")){
+      return false;
+    }
+  });
+  
 });
 </script>
         <?php
