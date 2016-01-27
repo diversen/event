@@ -72,7 +72,7 @@ $(document).ready(function(){
   });
   
   $("#delete_halv").click(function(){
-    if (!confirm("Er du sikker på, at du vil bryde den halve kvadrille? En evt helt kvadrille vil ligeledes blive brudt.")){
+    if (!confirm("Er du sikker på, at du vil bryde den halve kvadrille? En evt hel kvadrille vil ligeledes blive brudt.")){
       return false;
     }
   });
