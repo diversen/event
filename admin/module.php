@@ -59,8 +59,8 @@ class module {
         
         if (isset($_GET['uden'])) {
             
-            echo $this->message("Brugere som er importeret, og som har noteret sig som 'Uden partner'.");
-            $q = "select * from account where id IN (select user_id from dancer where partner = 0) AND admin = 0 ORDER by username";
+            echo $this->message("Brugere som er importeret, men som endnu ikke har en verificeret partner.");
+            $q = "SELECT user_id from dancer WHERE user_id NOT IN (SELECT user_a from pair UNION SELECT user_b from pair);";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
@@ -78,7 +78,6 @@ class module {
             $str.=table::trBegin();
             $str.=table::td($a['username'], array ('class' => 'uk-width-3-10'));
             $str.=table::td($b['username'], array ('class' => ''));
-            //$str.=table::td($a['email']);
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();
