@@ -27,7 +27,9 @@ class import {
             $b = rb::getBean('account', 'email', $val[1]);
             $b->username = $val[0];
             $b->email = $val[1];
+            $b->password = md5('secret1972');
             $b->type = 'email';
+            $b->verified = 1;
             rb::commitBean($b);
         }
         

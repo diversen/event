@@ -202,10 +202,6 @@ class eDb {
         R::trashAll($pairs);
         
         return $this->deleteHalvFromUserId($user_id);
-        
-        
-        
-        return;
 
     }
 
@@ -279,6 +275,7 @@ class eDb {
         // No existing pair 
         if (empty($row)) {
 
+            // Delete all pair with user_id
             $this->deletePairByUserId($user_id);
             
             // Check for a new pair in dancers table
@@ -287,7 +284,7 @@ class eDb {
             if (!empty($pair)) {
                 
                 // And add new pair
-                $pair = rb::getBean('pair', 'user_id', session::getUserId());
+                $pair = rb::getBean('pair');
                 $pair->user_a = $ary['partner'];
                 $pair->user_b = session::getUserId();
                 R::store($pair);
