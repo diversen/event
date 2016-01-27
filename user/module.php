@@ -38,12 +38,10 @@ class module {
         
         $this->checkAccess();
         if (isset($_POST['submit'])) {
-            
-            $user_id = session::getUserId();
-            
+
             // Update base info
             $ary = db::prepareToPost();
-            $this->updateFromForm($user_id, $ary);
+            $this->updateFromForm(session::getUserId(), $ary);
             http::locationHeader('/event/user/index', 'Dine data blev opdateret');
 
         }
@@ -54,14 +52,14 @@ class module {
     public function updateFromForm ($user_id, $ary) {
                 
         $e = new eDb();
-        R::begin();
+        //R::begin();
         
         // Update base info
         $e->updateDancer($user_id, $ary);
-
+        
         // Update pair
         $e->updatePairs($user_id, $ary);
-        R::commit();
+        //R::commit();
     }
 
     public function javascript () { ?>
