@@ -65,7 +65,7 @@ class module {
     public function javascript () { ?>
 <script>
 $(document).ready(function(){
-  $("#delete_partner, #delete_halv, #delete_hel").click(function(){
+  $("#delete_partner").click(function(){
     if (!confirm("Er du sikker på, at du vil bryde dit par? Eventuelle halve og hele kvadriller vil ligeledes blive brudt")){
       return false;
     }
