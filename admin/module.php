@@ -60,7 +60,7 @@ class module {
         if (isset($_GET['uden'])) {
             
             echo $this->message("Brugere som er importeret, men som endnu ikke har en verificeret partner.");
-            $q = "SELECT * from account WHERE user_id NOT IN (SELECT user_a from pair UNION SELECT user_b from pair);";
+            $q = "SELECT * from account WHERE id NOT IN (SELECT user_a from pair UNION SELECT user_b from pair);";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
