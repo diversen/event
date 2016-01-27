@@ -128,6 +128,8 @@ $(document).ready(function(){
             // Update pair - delete partner
             $this->updateFromForm(session::getUserId(), array('partner' => 0));
             
+            $e->deletePairByUserId(session::getUserId());
+            
             // Delete halve 
             $e->deleteHalvFromUserId(session::getUserId());
             
