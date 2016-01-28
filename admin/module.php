@@ -31,7 +31,7 @@ class module {
         }
         
         if (isset($_GET['par'])) {
-            $rows = $eDb->getAllPairsFromDancers();
+            $rows = $eDb->getAllPairsFromPairs();
             $this->displayPairs($rows);
         }
         

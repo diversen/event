@@ -13,7 +13,7 @@ class eHelpers {
     public function getFormPairsAry () {
         
         $eDb = new eDb();
-        $pairs = $eDb->getAllPairsFromDancers();
+        $pairs = $eDb->getAllPairsNotInHalve();
         $ary = [];
         $ary[0] = 'Intet par valgt';
         foreach ($pairs as $pair) {
@@ -40,7 +40,7 @@ class eHelpers {
     public function getFormHalveAry () {
         
         $eDb = new eDb();
-        $halve = $eDb->getAllHalve(session::getUserId());
+        $halve = $eDb->getAllHalveNotInHele(session::getUserId());
         
         $ary = [];
         $ary[0] = 'Ingen halv valgt';

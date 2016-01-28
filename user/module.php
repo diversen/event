@@ -184,7 +184,7 @@ $(document).ready(function(){
         $f->textareaSmall('comment');
         
         // Partner
-        $partners = $this->getUsers();
+        $partners = $this->getDancersForDropdown();
         $rows = [];
         $rows[0] = 'Ingen partner';
         
@@ -334,10 +334,7 @@ EOF;
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev bekræftet');
         }
 
-        
-        
-        
-        
+
         echo "<h3>Halv kvadrille</h3>";
         
         // Inviteret til at deltage i en halv
@@ -545,56 +542,17 @@ EOF;
         $f->formEnd();
         return $f->getStr();
     }
-    
-    
-    public function deletehalvAction () {
-        echo helpers::confirmDeleteForm('delete', 'Slet halv kvadrille');
-        
-        if (isset($_POST['delete'])) {
-            $eDb = new eDb();
-            $eDb->deleteHalvFromUserId(session::getUserId());
-            http::locationHeader('/event/user/index');
-        }
-    }
-
-    
-    /**
-     * Delete a 'helmember' based on session::getUserId
-     * @return boolean $res result of R::thrashAll
-     */
-    public function dbDeleteHelMember(){
-        $members = R::findAll('helmember', "user_id = ?", array (session::getUserId()));
-        return R::trashAll($members);
-    }
-
-
-    
-
-
-    
-    public function dbCreateHel($ary) {
-        
-        $this->dbDeleteHelMember();
-        
-        $hel = rb::getBean('hel');
-        $hel->name = html::specialDecode($ary['name']);
-        $hel->reserved = html::specialDecode($ary['reserved']);
-        $hel->user_id = session::getUserId();
-
-        $member = R::dispense('helmember');
-        $member->user_id = session::getUserId();
-
-        $hel->ownMemberList[] = $member;
-        return R::store($hel);
-    }
-
-
-
 
     /**
-     * Get all users
+     * Get all dancers for dropdown
      */
-    public function getUsers () {
-        return q::select('account')->filter('admin =' , 0)->fetch();
+    public function getDancersForDropdown () {
+        
+        $q = <<<EOF
+SELECT * FROM `account` WHERE id NOT IN 
+    (SELECT user_a FROM pair UNION SELECT user_b FROM pair) AND
+`admin` = 0;
+EOF;
+        return q::query($q)->fetch();
     }
 }

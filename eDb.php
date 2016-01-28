@@ -22,8 +22,19 @@ class eDb {
      * Method which will get all pairs from dancer
      * @return array $rows
      */
-    public function getAllPairsFromDancers() {
+    public function getAllPairsFromPairs() {
         $q = "SELECT * FROM pair";
+        $rows = q::query($q)->fetch();
+        return $rows;
+    }
+    
+        
+    /**
+     * Method which will get all pairs from dancer
+     * @return array $rows
+     */
+    public function getAllPairsNotInHalve() {
+        $q = "SELECT * FROM pair WHERE id NOT IN ( select pair_a from halv WHERE confirmed = 1 UNION select pair_b FROM halv WHERE confirmed = 1)";
         $rows = q::query($q)->fetch();
         return $rows;
     }
@@ -35,6 +46,21 @@ class eDb {
     public function getAllHalve ($user_id) {
         $user_id = connect::$dbh->quote($user_id);
         $q = "SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL )";
+        $rows = q::query($q)->fetch();
+        return $rows;
+    }
+    
+        /**
+     * Get all halve except halve where user is in
+     * @return type
+     */
+    public function getAllHalveNotInHele ($user_id) {
+        $user_id = connect::$dbh->quote($user_id);
+        $q = <<<EOF
+SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN 
+    (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL ) AND id NOT IN 
+    (SELECT halv_a FROM hel WHERE confirmed = 1 UNION SELECT halv_a FROM hel WHERE confirmed = 1)
+EOF;
         $rows = q::query($q)->fetch();
         return $rows;
     }
@@ -59,7 +85,7 @@ class eDb {
      * @param int $user_b
      * @return array $row row from pair table 
      */
-    public function getPairFromPartners ($user_a, $user_b) {
+    public function getPairFromPairUsers ($user_a, $user_b) {
         $row = q::select('pair')->filter('user_a =', $user_a)->condition('AND')->filter('user_b =', $user_b)->fetchSingle();
         if (!empty($row)) {
             return $row;
@@ -70,6 +96,19 @@ class eDb {
         }
         return array ();
     }
+    
+    /**
+     * Get pair from a user_d
+     * @param int $user_id
+     * @return array $row
+     */
+    public function getPairFromUserId ($user_id) {
+        $row = q::select('pair')->filter('user_b =', $user_id)->condition('OR')->
+                filter('user_a =', $user_id)->fetchSingle();
+        return $row;
+    }
+    
+    
 
     /**
      * Delete 'halv' from user_id
@@ -269,8 +308,8 @@ class eDb {
      */
     public function updatePairs($user_id, $ary) {
         
-        // Fetch an existing pair
-        $row = $this->getPairFromPartners($user_id, $ary['partner']);
+        // Fetch an existing pair from pairs
+        $row = $this->getPairFromPairUsers($user_id, $ary['partner']);
         
         // No existing pair 
         if (empty($row)) {
@@ -557,9 +596,15 @@ EOF;
         
         // create halv
         $halv = rb::getBean('halv');
-        $halv->name = html::specialDecode($ary['name']);
-        $halv->reserved = html::specialDecode($ary['reserved']);
+
+        // User id
         $halv->user_id = session::getUserId();
+        
+        // Attach pair ids
+        $pair = $this->getPairFromUserId(session::getUserId());
+        $halv->pair_a = $pair['id'];
+        
+        $halv->pair_b = $ary['pair'];
         
         // Attach all 4 members
         $halv = $this->attachMembersForHalv($halv, $ary);
@@ -573,13 +618,19 @@ EOF;
      */
     public function createHel($ary) {
         
-        // create halv
-        $hel = rb::getBean('hel');
-        //$hel->name = html::specialDecode($ary['name']);
-        //$hel->reserved = html::specialDecode($ary['reserved']);
-        $hel->user_id = session::getUserId();
+        $e = new eDb();
         
-        // Attach all 4 members
+        // create hel
+        $hel = rb::getBean('hel');
+
+        $hel->user_id = session::getUserId();
+
+        // Attach halve ids
+        $my_halv = $e->getUserHalvFromUserId(session::getUserId());
+        $hel->halv_a = $ary['halv'];
+        $hel->halv_b = $my_halv['id'];
+
+        // Attach all 8 members
         $hel = $this->attachMembersForHel($hel, $ary);
         return R::store($hel);
     }
