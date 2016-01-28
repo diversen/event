@@ -52,15 +52,15 @@ class module {
         if (isset($_GET['reg_minus'])) {
             
             echo $this->message("Brugere som er importeret, men som endnu ikke har foretaget en opdatering på sitet.");
-            $q = "select * from account where id NOT IN (select user_id from dancer) AND admin = 0 ORDER by username";
+            $q = "SELECT * from account WHERE id NOT IN (select user_id from dancer) AND admin = 0 ORDER by username";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
         
         if (isset($_GET['uden'])) {
             
-            echo $this->message("Brugere som er importeret, men som endnu ikke har en verificeret partner.");
-            $q = "SELECT * from account WHERE `admin` != 1 AND id NOT IN (SELECT user_a from pair UNION SELECT user_b from pair);";
+            echo $this->message("Brugere som er importeret og har foretaget en opdatering på sitet, men som endnu ikke har en verificeret partner.");
+            $q = "SELECT * from account WHERE `admin` = 0 AND id NOT IN (SELECT user_a from pair UNION SELECT user_b from pair) AND id IN (SELECT user_id FROM dancer)";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
