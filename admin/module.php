@@ -120,6 +120,17 @@ class module {
             $str.=table::trBegin();
             $str.=table::td($row['username'], array ('class' => 'uk-width-3-10'));
             $str.=table::td($row['email']);
+            
+            $dancer = q::select('dancer')->filter('user_id= ', $row['id'])->fetchSingle();
+            if (!empty($dancer)) {
+                $str.=table::td(html::specialEncode($dancer['comment']));
+                // print_r($dancer);
+            } else {
+                $str.=table::td('');
+            }
+            
+            
+            
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();
