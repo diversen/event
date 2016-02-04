@@ -6,7 +6,6 @@ use diversen\db\connect;
 use diversen\db\q;
 use diversen\db\rb;
 use diversen\session;
-use diversen\html;
 use R;
 
 /**
@@ -24,8 +23,8 @@ class eDb {
      */
     public function getAllPairsFromPairs() {
         $q = "SELECT * FROM pair";
-        $rows = q::query($q)->fetch();
-        return $rows;
+        return R::getAll($q);
+
     }
     
         
@@ -35,8 +34,7 @@ class eDb {
      */
     public function getAllPairsNotInHalve() {
         $q = "SELECT * FROM pair WHERE id NOT IN ( select pair_a from halv WHERE confirmed = 1 UNION select pair_b FROM halv WHERE confirmed = 1)";
-        $rows = q::query($q)->fetch();
-        return $rows;
+        return R::getAll($q);
     }
     
     /**
@@ -46,8 +44,7 @@ class eDb {
     public function getAllHalve ($user_id) {
         $user_id = connect::$dbh->quote($user_id);
         $q = "SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL )";
-        $rows = q::query($q)->fetch();
-        return $rows;
+        return R::getAll($q);
     }
     
         /**
@@ -61,8 +58,7 @@ SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN
     (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL ) AND id NOT IN 
     (SELECT halv_a FROM hel WHERE confirmed = 1 UNION SELECT halv_a FROM hel WHERE confirmed = 1)
 EOF;
-        $rows = q::query($q)->fetch();
-        return $rows;
+        return R::getAll($q);
     }
 
     /**
@@ -86,25 +82,35 @@ EOF;
      * @return array $row row from pair table 
      */
     public function getPairFromPairUsers ($user_a, $user_b) {
-        $row = q::select('pair')->filter('user_a =', $user_a)->condition('AND')->filter('user_b =', $user_b)->fetchSingle();
+        // $row = q::select('pair')->filter('user_a =', $user_a)->condition('AND')->filter('user_b =', $user_b)->fetchSingle();
+        
+        $user_a = connect::$dbh->quote($user_a);
+        $user_b = connect::$dbh->quote($user_b);
+        
+        $q = "SELECT * FROM pair WHERE user_a = $user_a AND user_b = $user_b";
+        $row =  R::getRow($q);
+        
         if (!empty($row)) {
             return $row;
         }
-        $row = q::select('pair')->filter('user_b =', $user_a)->condition('AND')->filter('user_a =', $user_b)->fetchSingle();
+        
+        $q = "SELECT * FROM pair WHERE user_b = $user_a AND user_a = $user_b";
+        $row =  R::getRow($q);
         if (!empty($row)) {
             return $row;
         }
         return array ();
     }
-    
+
     /**
-     * Get pair from a user_d
+     * Return a pair from user_id
      * @param int $user_id
      * @return array $row
      */
-    public function getPairFromUserId ($user_id) {
-        $row = q::select('pair')->filter('user_b =', $user_id)->condition('OR')->
-                filter('user_a =', $user_id)->fetchSingle();
+    public function getUserPairFromUserId ($user_id) {
+        $user_id = connect::$dbh->quote($user_id);
+        $q = "SELECT * FROM pair WHERE user_b = $user_id OR user_a = $user_id";
+        $row =  R::getRow($q);
         return $row;
     }
     
@@ -119,9 +125,8 @@ EOF;
 
         $user_id = connect::$dbh->quote($user_id);
         $q = "SELECT DISTINCT(halv_id) FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL";
-       
-        $halve = q::query($q)->fetch();
-        
+      
+        $halve =  R::getAll($q);
         foreach ($halve as $halv) {
             // Delete all 'halve' if user owns them
             $halv = R::findOne('halv', 'id = ?', [$halv['halv_id']]);
@@ -137,10 +142,12 @@ EOF;
      */
     public function deleteHelFromUserId($user_id) {
 
+        
+        
         $user_id = connect::$dbh->quote($user_id);
         $q = "SELECT DISTINCT(hel_id) FROM helmember WHERE user_id = $user_id AND hel_id IS NOT NULL";
        
-        $hele = q::query($q)->fetch(); 
+        $hele = R::getAll($q);
         foreach ($hele as $hel) {
             // Delete all 'hele' if user is part of them them
             $hel = R::findOne('hel', 'id = ?', [$hel['hel_id']]);
@@ -195,17 +202,15 @@ EOF;
      * @return boolean $res
      */
     public function confirmHalvMembers($id) {
-        R::begin();
+
         $bean = rb::getBean('halv', 'id', $id);
         $bean->confirmed = 1;
         R::store($bean);
-        q::update('halvmember')->values(array('confirmed' => 1))->filter('halv_id =', $id)->exec();
         
-        if (R::commit()) {
-            return true;
-        } else {
-            R::rollback();
-            return false;
+        $beans = R::findAll('halvmember', "confirmed = ? AND halv_id = ?", array (0, $id));
+        foreach($beans as $b) {
+            $b->confirmed = 1;
+            R::store($b);
         }
     }
     
@@ -215,17 +220,15 @@ EOF;
      * @return boolean $res
      */
     public function confirmHelMembers($id) {
-        R::begin();
+
         $bean = rb::getBean('hel', 'id', $id);
         $bean->confirmed = 1;
         R::store($bean);
-        q::update('helmember')->values(array('confirmed' => 1))->filter('hel_id =', $id)->exec();
         
-        if (R::commit()) {
-            return true;
-        } else {
-            R::rollback();
-            return false;
+        $beans = R::findAll('helmember', "confirmed = ? AND hel_id = ?", array (0, $id));        
+        foreach($beans as $b) {
+            $b->confirmed = 1;
+            R::store($b);
         }
     }
     
@@ -240,18 +243,11 @@ EOF;
         $pairs = R::findAll('pair', 'user_a = ? OR user_b = ?', [$user_id, $user_id]);
         R::trashAll($pairs);
         
-        return $this->deleteHalvFromUserId($user_id);
+        $this->deleteHalvFromUserId($user_id);
 
     }
 
-    /**
-     * Return a pair from user_id
-     * @param int $user_id
-     * @return array $row
-     */
-    public function getUserPairFromUserId ($user_id) {
-        return q::select('pair')->filter('user_a =', $user_id)->condition('OR')->filter('user_b =', $user_id)->fetchSingle();
-    }
+
     
     /**
      * Return a 'halv' from user_id
@@ -278,8 +274,10 @@ EOF;
      * @param int $id
      * @return array $pair
      */
-    public function getPair ($id) {
-        return q::select('pair')->filter('id =', $id)->fetchSingle();
+    public function getPairFromId ($id) {
+        $id = connect::$dbh->quote($id);
+        $q = "SELECT * FROM pair WHERE id = $id";
+        return R::getRow($q);
     }
     
     /**
@@ -307,19 +305,19 @@ EOF;
      * @param type $ary
      */
     public function updatePairs($user_id, $ary) {
+ 
         
         // Fetch an existing pair from pairs
         $row = $this->getPairFromPairUsers($user_id, $ary['partner']);
         
         // No existing pair 
         if (empty($row)) {
-
+       
             // Delete all pair with user_id
             $this->deletePairByUserId($user_id);
-            
+ 
             // Check for a new pair in dancers table
             $pair = $this->getPairFromDancers(session::getUserId());
-
             if (!empty($pair)) {
                 
                 // And add new pair
@@ -330,6 +328,18 @@ EOF;
                 
             }
         }
+    }
+    
+        
+    public function updateFromForm ($user_id, $ary) {
+
+        // Update base info
+        $this->updateDancer($user_id, $ary);
+        
+        // Update pair
+        $this->updatePairs($user_id, $ary);
+        
+        
     }
     
     /**
@@ -346,8 +356,7 @@ SELECT DISTINCT
     WHERE a.user_id = b.partner AND a.partner = b.user_id AND a.user_id = $q_user_id;
 EOF;
 
-        $row = q::query($q)->fetchSingle();
-        return $row;
+        return R::getRow($q);
     }
 
 
@@ -364,7 +373,7 @@ EOF;
         $a_b = $e->getPairPartnerUserId(session::getUserId());
         
         // Selected pair
-        $pair_b = $e->getPair($ary['pair']);
+        $pair_b = $e->getPairFromId($ary['pair']);
         $b_a = $pair_b['user_a'];
         $b_b = $pair_b['user_b'];
         
@@ -451,7 +460,9 @@ SELECT DISTINCT
         FROM halvmember m, halv h 
     WHERE m.halv_id = h.id AND m.user_id = $user_id $opt  AND m.halv_id IS NOT NULL
 EOF;
-        return q::query($q)->fetchSingle();
+        
+        return R::getRow($q);
+
     }
     
     
@@ -477,7 +488,7 @@ SELECT DISTINCT
         FROM helmember m, hel h 
     WHERE m.hel_id = h.id AND m.user_id = $user_id $opt  AND m.hel_id IS NOT NULL
 EOF;
-        return q::query($q)->fetchSingle();
+        return R::getRow($q);
     }
 
     
@@ -487,7 +498,8 @@ EOF;
      * @return array $rows
      */
     public function getUsersFromHalv($id) {
-        return q::select('halvmember')->filter('halv_id =', $id)->fetch();
+        $id = connect::$dbh->quote($id);
+        return R::getAll("SELECT * FROM halvmember WHERE halv_id = $id");
     }
     
     /**
@@ -496,7 +508,8 @@ EOF;
      * @return array $rows
      */
     public function getUsersFromHel($id) {
-        return q::select('helmember')->filter('hel_id =', $id)->fetch();
+        $id = connect::$dbh->quote($id);
+        return R::getAll("SELECT * FROM helmember WHERE hel_id = $id");
     }
     
     /**
@@ -505,9 +518,11 @@ EOF;
      * @return array $rows
      */
     public function getSingleUserFromHalv($id, $user_id) {
-        return q::select('halvmember')->
-                filter('halv_id =', $id)->condition('AND')->
-                filter('user_id =', $user_id)->fetchSingle();
+        $id = connect::$dbh->quote($id);
+        $user_id = connect::$dbh->quote($user_id);
+        $q = "SELECT * from halvmember WHERE halv_id = $id AND user_id = $user_id";
+        return R::getRow($q);
+
     }
     
         
@@ -517,9 +532,12 @@ EOF;
      * @return array $rows
      */
     public function getSingleUserFromHel($id, $user_id) {
-        return q::select('helmember')->
-                filter('hel_id =', $id)->condition('AND')->
-                filter('user_id =', $user_id)->fetchSingle();
+        
+        $id = connect::$dbh->quote($id);
+        $user_id = connect::$dbh->quote($user_id);
+        $q = "SELECT * from helmember WHERE hel_id = $id AND user_id = $user_id";
+        return R::getRow($q);
+
     }
     
     
@@ -601,7 +619,7 @@ EOF;
         $halv->user_id = session::getUserId();
         
         // Attach pair ids
-        $pair = $this->getPairFromUserId(session::getUserId());
+        $pair = $this->getUserPairFromUserId(session::getUserId());
         $halv->pair_a = $pair['id'];
         
         $halv->pair_b = $ary['pair'];

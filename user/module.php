@@ -36,31 +36,28 @@ class module {
      */
     public function indexAction () {
         
+        $e = new eDb();
         $this->checkAccess();
         if (isset($_POST['submit'])) {
 
             // Update base info
             $ary = db::prepareToPost();
-            $this->updateFromForm(session::getUserId(), $ary);
+            R::begin();
+
+
+            $e->updateFromForm(session::getUserId(), $ary);
+            
+            $res = R::commit();
+            if (!$res) {
+                R::rollback();
+            }
             http::locationHeader('/event/user/index', 'Dine data blev opdateret');
 
         }
         
         echo $this->formBase();
     }
-    
-    public function updateFromForm ($user_id, $ary) {
-                
-        $e = new eDb();
-        //R::begin();
-        
-        // Update base info
-        $e->updateDancer($user_id, $ary);
-        
-        // Update pair
-        $e->updatePairs($user_id, $ary);
-        //R::commit();
-    }
+
 
     public function javascript () { ?>
 <script>
@@ -136,8 +133,10 @@ $(document).ready(function(){
 
         if (isset($_POST['delete_partner'])) {
             
+            R::begin();
+            
             // Update pair - delete partner
-            $this->updateFromForm(session::getUserId(), array('partner' => 0));
+            $e->updateFromForm(session::getUserId(), array('partner' => 0));
             
             $e->deletePairByUserId(session::getUserId());
             
@@ -147,6 +146,11 @@ $(document).ready(function(){
             // Delete hele
             $e->deleteHelFromUserId(session::getUserId());
             
+            $res = R::commit();
+            
+            if (!$res) {
+                R::rollback();
+            }
             // Location
             http::locationHeader(
                     '/event/user/index', 'Skilsmisse fuldbyrdet. Du er løst fra din partner');
@@ -245,12 +249,29 @@ EOF;
         if (isset($_POST['delete_hel'])) {
             
             // Delete hele
+            
+            R::begin();
+            
             $e->deleteHelFromUserId(session::getUserId());
+            
+            $res = R::commit();
+            if (!$res) {
+                R::rollback();
+            }
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
         }
         
         if (isset($_POST['confirm_hel'])) {
+            
+            R::begin();
+            
             $e->confirmHelMembers($hel['hel_id']);
+            
+            $res = R::commit();
+            if (!$res) {
+                R::rollback();
+            }
+            
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev bekræftet');
         }
                 
@@ -319,18 +340,35 @@ EOF;
         
         if (isset($_POST['delete_halv'])) {
             
+            R::begin();
+            
             // Delete halve 
             $e->deleteHalvFromUserId(session::getUserId());
             
             // Delete hele
             $e->deleteHelFromUserId(session::getUserId());
             
+            $res = R::commit();
+            if (!$res) {
+                R::rollback();
+            }
+            
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev slettet');
             
         }
         
         if (isset($_POST['confirm_halv'])) {
+            
+            R::begin();
+            
+            
             $e->confirmHalvMembers($halv['halv_id']);
+            
+            $res = R::commit();
+            if (!$res) {
+                
+                R::rollback();
+            }
             http::locationHeader('/event/user/index', 'Den halve kvadrille blev bekræftet');
         }
 
@@ -431,6 +469,8 @@ EOF;
                 // Prepare
                 $ary = db::prepareToPostArray(array('pair'), true);
                 
+                R::begin();
+                
                 // Delete other halve
                 $eDb->deleteHalvFromUserId(session::getUserId());
                 
@@ -443,6 +483,10 @@ EOF;
                 $bean->name = $name;
                 R::store($bean);
                 
+                $res = R::commit();
+                if (!$res) {
+                    R::rollback();
+                }
                 http::locationHeader('/event/user/index');
             } else {
                 echo html::getErrors($this->errors);
@@ -473,17 +517,31 @@ EOF;
                 // Prepare
                 $ary = db::prepareToPostArray(array('halv'), true);
                 
+                R::begin();
+                
                 // Delete other hele
                 $eDb->deleteHelFromUserId(session::getUserId());
                 
                 // Create
                 $id = $eDb->createHel($ary);
                 
+                
                 // Set a better name
                 $name = $eDb->getUsersStrFromHel($id);
                 $bean = rb::getBean('hel', 'id', $id);
                 $bean->name = $name;
                 R::store($bean);
+                
+                
+                
+                
+                $res = R::commit();
+                
+                if (!$res) {
+                    R::rollback();
+                }
+                
+                
                 
                 http::locationHeader('/event/user/index');
             } else {
