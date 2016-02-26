@@ -59,7 +59,7 @@ class eDb {
         $q = <<<EOF
 SELECT * FROM halv WHERE confirmed = 1 AND id NOT IN 
     (SELECT halv_id FROM halvmember WHERE user_id = $user_id AND halv_id IS NOT NULL ) AND id NOT IN 
-    (SELECT halv_a FROM hel WHERE confirmed = 1 UNION SELECT halv_a FROM hel WHERE confirmed = 1)
+    (SELECT halv_a FROM hel WHERE confirmed = 1 UNION SELECT halv_b FROM hel WHERE confirmed = 1)
 EOF;
         $rows = q::query($q)->fetch();
         return $rows;
