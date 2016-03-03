@@ -39,7 +39,7 @@ class import {
             
             $b = rb::getBean('allowed', 'email', $val[1]);
             $b->username = $val[0];
-            $b->email = $val[1];
+            $b->email = \diversen\strings\mb::tolower($val[1]);
             $b->type = 'email';
             rb::commitBean($b);
         }
