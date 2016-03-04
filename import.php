@@ -3,9 +3,8 @@
 namespace modules\event;
 
 use diversen\db\rb;
-use R;
 
-rb::connect();
+rb::connectExisting();
 
 class import {
 

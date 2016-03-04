@@ -14,7 +14,7 @@ use R;
 class eDb {
     
     public function __construct() {
-        rb::connect();
+        rb::connectExisting();
     }
     
     /**
