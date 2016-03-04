@@ -8,7 +8,7 @@ $_MODULE_MENU = array();
 
 $level = session::getUserLevel();
 
-if (session::isUser()) {
+if ($level == 'user') {
     $_MODULE_MENU[] = array(
         'title' => lang::translate('Elev'),
         'url' => '/event/user/index',
