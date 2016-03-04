@@ -3,7 +3,6 @@
 namespace modules\event;
 
 use diversen\db\connect;
-use diversen\db\q;
 use diversen\db\rb;
 use diversen\session;
 use R;
