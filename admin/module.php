@@ -15,14 +15,18 @@ class module {
     public function checkAccess () {
         if (!session::isAdmin()) {
             moduleloader::setStatus(403);
-            return;
+            return false;
         }
+        return true;
     }
     
     
     
     public function indexAction () {
-        $this->checkAccess(); 
+        
+        if (!$this->checkAccess()) {
+            return;
+        } 
         
         $eDb = new eDb();
         if (isset($_GET['all']) ) {
@@ -137,7 +141,9 @@ class module {
     
     public function importAction () {
         
-        $this->checkAccess(); 
+        if (!$this->checkAccess()) {
+            return;
+        } 
         
         echo "I den følgende form kan du indsætte brugere. <br />";
         echo $this->importForm();

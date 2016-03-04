@@ -8,14 +8,14 @@ $_MODULE_MENU = array();
 
 $level = session::getUserLevel();
 
-if ($level == 'user') {
+if (session::isUser()) {
     $_MODULE_MENU[] = array(
         'title' => lang::translate('Elev'),
         'url' => '/event/user/index',
         'auth' => 'user');
 }
 
-if ($level =='admin') {
+if (session::isAdmin()) {
     $_MODULE_MENU[] = array(
         'title' => lang::translate('Vis alle'),
         'url' => '/event/admin/index?all=1',
