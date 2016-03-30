@@ -27,8 +27,18 @@ if (session::isAdmin()) {
         'auth' => 'admin');
     
     $_MODULE_MENU[] = array(
+        'title' => lang::translate('Løse par'),
+        'url' => '/event/admin/index?par_loose=1',
+        'auth' => 'admin');
+    
+    $_MODULE_MENU[] = array(
         'title' => lang::translate('Halve kvadriller'),
         'url' => '/event/admin/index?halv=1',
+        'auth' => 'admin');
+    
+    $_MODULE_MENU[] = array(
+        'title' => lang::translate('Løse Halve'),
+        'url' => '/event/admin/index?halv_loose=1',
         'auth' => 'admin');
     
     $_MODULE_MENU[] = array(

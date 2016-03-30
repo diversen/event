@@ -39,10 +39,20 @@ class module {
             $this->displayPairs($rows);
         }
         
+        if (isset($_GET['par_loose'])) {
+            $rows = $eDb->getAllPairsNotInHalve();
+            $this->displayPairs($rows);
+        }
+        
         if (isset($_GET['halv'])) {
-            
             $q = "SELECT * FROM halv WHERE confirmed = 1";
             $rows = q::query($q)->fetch();
+            $this->displayHalve($rows);
+        }
+        
+        if (isset($_GET['halv_loose'])) {
+            $rows = $eDb->getAllHalveNotInHele(session::getUserId());
+            // $rows = q::query($q)->fetch();
             $this->displayHalve($rows);
         }
         
@@ -74,6 +84,10 @@ class module {
         echo $mes . "<br />";
     }
     
+    /**
+     * Display pairs as a HTML table
+     * @param array $rows
+     */
     public function displayPairs ( $rows ) {
         $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));
         foreach($rows as $row) {
@@ -86,9 +100,8 @@ class module {
         }
         $str.=table::tableEnd();
         echo $str;
-        
-        
     }
+
     
     public function displayHalve ( $rows ) {
         $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));

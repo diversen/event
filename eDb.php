@@ -23,7 +23,6 @@ class eDb {
     public function getAllPairsFromPairs() {
         $q = "SELECT * FROM pair";
         return R::getAll($q);
-
     }
     
         
