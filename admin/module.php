@@ -20,7 +20,24 @@ class module {
         return true;
     }
     
-    
+    public function deleteAction () {
+        
+        if (!$this->checkAccess()) {
+            return;
+        } 
+        
+ 	q::delete('account')->filter('username != ', 'admin')->exec();
+
+ 	q::delete('hel')->exec();
+ 	q::delete('helmember')->exec();
+ 	q::delete('halv')->exec();
+ 	q::delete('halvmember')->exec();
+ 	q::delete('dancer')->exec();
+ 	q::delete('pair')->exec();
+ 	q::delete('allowed')->exec();
+ 	q::delete('account_sub')->exec();
+
+    }   
     
     public function indexAction () {
         
