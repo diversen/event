@@ -9,6 +9,7 @@ use diversen\moduleloader;
 use diversen\session;
 use modules\event\import;
 use modules\event\eDb;
+use diversen\prg;
 
 class module {
     
@@ -47,7 +48,7 @@ class module {
         
         $eDb = new eDb();
         if (isset($_GET['all']) ) {
-            $rows = q::select('account')->filter('admin = ', 0 )->order('username')->fetch();
+            $rows = q::select('account')->filter('admin = ', 0 )->order('tag, username')->fetch();
             $this->displayAll($rows);
         }
         
@@ -83,7 +84,7 @@ class module {
         if (isset($_GET['reg_minus'])) {
             
             echo $this->message("Brugere som er importeret, men som endnu ikke har foretaget en opdatering på sitet.");
-            $q = "SELECT * from account WHERE id NOT IN (select user_id from dancer) AND admin = 0 ORDER by username";
+            $q = "SELECT * from account WHERE id NOT IN (select user_id from dancer) AND admin = 0 ORDER by tag, username";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
@@ -91,7 +92,10 @@ class module {
         if (isset($_GET['uden'])) {
             
             echo $this->message("Brugere som er importeret og har foretaget en opdatering på sitet, men som endnu ikke har en verificeret partner.");
-            $q = "SELECT * from account WHERE `admin` = 0 AND id NOT IN (SELECT user_a from pair UNION SELECT user_b from pair) AND id IN (SELECT user_id FROM dancer)";
+            $q = "SELECT * from account WHERE `admin` = 0 AND "
+                    . "id NOT IN (SELECT user_a from pair UNION SELECT user_b from pair) AND "
+                    . "id IN (SELECT user_id FROM dancer)"
+                    . "ORDER by tag, username";
             $rows = q::query($q)->fetch();
             $this->displayAll($rows);
         }
@@ -128,9 +132,7 @@ class module {
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();
-        echo $str;
-        
-        
+        echo $str;  
     }
     
     public function displayHele ( $rows ) {
@@ -143,9 +145,7 @@ class module {
         $str.=table::tableEnd();
         echo $str;
         
-        
     }
-    
     
     public function displayAll ($rows) {
  
@@ -153,6 +153,7 @@ class module {
         foreach($rows as $row) {
             $str.=table::trBegin();
             $str.=table::td($row['username'], array ('class' => 'uk-width-3-10'));
+            $str.=table::td($row['tag']);
             $str.=table::td($row['email']);
             
             // Comment
@@ -169,26 +170,47 @@ class module {
         echo $str;
     }
     
+    private $errors = [];
+    
+    public function validate() {
+        if (empty($_POST['tag'])) {
+            $this->errors[] = 'Indtast et tag, fx 3y';
+        }
+    }
+    
     public function importAction () {
+        
+        prg::prg();
         
         if (!$this->checkAccess()) {
             return;
         } 
         
         echo "I den følgende form kan du indsætte brugere. <br />";
-        echo $this->importForm();
         
         $i = new import();
         if (isset($_POST['submit'])) {
-            $ary = $i->getAryFromTxt($_POST['users']);
-            $i->addToDb($ary);
+            
+            $this->validate();
+            if (!empty($this->errors)) {
+                echo html::getErrors($this->errors);
+            } else {
+                $ary = $i->getAryFromTxt($_POST['users']);
+                $i->addToDb($ary, $_POST['tag']);
+            }   
+            
         }
+        echo $this->importForm();
     }
     
     public function importForm () {
         $f = new html();
         $f->formStart();
+        
         $f->legend('Indsæt brugere');
+        $f->label('tag', 'Indtast et tag, fx klasse');
+        $f->text('tag');
+        $f->label('users', 'Indsæt brugere:');
         $f->textarea('users');
         $f->submit('submit', 'Send');
         $f->formEnd();
