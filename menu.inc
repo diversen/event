@@ -3,7 +3,6 @@
 use diversen\lang;
 use diversen\session;
 
-
 $_MODULE_MENU = array();
 
 $level = session::getUserLevel();

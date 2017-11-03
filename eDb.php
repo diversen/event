@@ -5,7 +5,8 @@ namespace modules\event;
 use diversen\db\connect;
 use diversen\db\rb;
 use diversen\session;
-use R;
+// use R;
+use RedBeanPHP\R;
 
 /**
  * SQL class for doing SQL ...
