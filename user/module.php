@@ -194,7 +194,7 @@ $(document).ready(function(){
             if ($partner['username'] == $account['username']) { 
                 continue;
             }
-            $rows[$partner['id']] = $partner['username'];
+            $rows[$partner['id']] = $partner['username'] . " ($partner[tag])";
         }
         
         
