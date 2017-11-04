@@ -105,7 +105,12 @@ class module {
     public function message($mes) {
         echo $mes . "<br />";
     }
-    
+
+    public function getUserTagStr ($row) {
+        $row = html::specialEncode($row);
+        return $row['username'] . " ($row[tag])";
+    }
+
     /**
      * Display pairs as a HTML table
      * @param array $rows
@@ -116,8 +121,8 @@ class module {
             $a = session::getAccount($row['user_a']);
             $b = session::getAccount($row['user_b']);
             $str.=table::trBegin();
-            $str.=table::td($a['username'], array ('class' => 'uk-width-3-10'));
-            $str.=table::td($b['username'], array ('class' => ''));
+            $str.=table::td($this->getUserTagStr($a), array ('class' => 'uk-width-3-10'));
+            $str.=table::td($this->getUserTagStr($a), array ('class' => ''));
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();

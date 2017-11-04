@@ -200,7 +200,7 @@ $(document).ready(function(){
         
         $label = <<<EOF
 Har du en partner, så vælg en fra listen. 
-Når din partner har valgt dig, så udgør i et par, og i kan vælge en halv kvadrille 
+Når din partner har valgt dig, så udgør I et par, og I kan vælge en halv kvadrille 
 EOF;
         $f->label('partner', $label);
         $f->selectAry('partner', $rows);
