@@ -607,7 +607,7 @@ EOF;
         $q = <<<EOF
 SELECT * FROM `account` WHERE id NOT IN 
     (SELECT user_a FROM pair UNION SELECT user_b FROM pair) AND
-`admin` = 0 ORDER by username;
+`admin` = 0 ORDER by tag, username;
 EOF;
         return q::query($q)->fetch();
     }
