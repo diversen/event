@@ -6,6 +6,11 @@ use modules\event\eDb;
 use diversen\session;
 
 class eHelpers {
+
+    public function getUserTagStr ($row) {
+        $row = html::specialEncode($row);
+        return $row['username'] . " ($row[tag])";
+    }
     /**
      * Get all pairs as an array excluding pair with user
      * @return array $ary array of pairs
@@ -27,7 +32,7 @@ class eHelpers {
                 continue;
             }
             
-            $pair_str = $a['username'] . ' - ' . $b['username'];
+            $pair_str = $this->getUserTagStr($a) . " - " . $this->getUserTagStr($b);
             $ary[$pair['id']] = $pair_str;
         }
         return $ary;
