@@ -27,6 +27,11 @@ class module {
             return;
         }
     }
+
+    public function getUserTagStr ($row) {
+        $row = html::specialEncode($row);
+        return $row['username'] . " ($row[tag])";
+    }
     
     /**
      * /event/user/index
@@ -127,7 +132,7 @@ $(document).ready(function(){
         $this->javascript();
         $user = session::getAccount($partner_id);
         echo helpers::confirmDeleteForm(
-                'delete_partner', "Du har en partner: '$user[username]'", 'Ophæv partnerskab');
+                'delete_partner', "Du har en partner: " . $this->getUserTagStr($user) . " " , 'Ophæv partnerskab');
 
         if (isset($_POST['delete_partner'])) {
             
