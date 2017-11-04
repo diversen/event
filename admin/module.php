@@ -128,8 +128,9 @@ class module {
     public function displayHalve ( $rows ) {
         $str = table::tableBegin(array('class' => 'uk-table uk-table-hover uk-table-striped uk-table-condensed'));
         foreach($rows as $row) {
+            $row = html::specialEncode($row);
             $str.=table::trBegin();
-            $str.=table::td($row['name']);
+            $str.=table::td($row['name'] . ' (' . $row['tag'] . ')');
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();
