@@ -5,7 +5,6 @@ namespace modules\event;
 use diversen\db\connect;
 use diversen\db\rb;
 use diversen\session;
-// use R;
 use RedBeanPHP\R;
 
 /**
@@ -141,8 +140,6 @@ EOF;
      */
     public function deleteHelFromUserId($user_id) {
 
-        
-        
         $user_id = connect::$dbh->quote($user_id);
         $q = "SELECT DISTINCT(hel_id) FROM helmember WHERE user_id = $user_id AND hel_id IS NOT NULL";
        
@@ -160,7 +157,6 @@ EOF;
      * @return boolean $res
      */
     public function deleteHalvFromId($id) {
-        
         
         // Only allow members to delete from hel.
         $row = $this->getSingleUserFromHalv($id, session::getUserId());
@@ -550,7 +546,7 @@ EOF;
         $ary = [];
         foreach($users as $user) {
             $account = session::getAccount($user['user_id']);
-            $ary[] = $account['username'];
+            $ary[] = $account['username'] . " ($account[tag])";
         }
         return implode(' - ', $ary);
     }
@@ -565,7 +561,7 @@ EOF;
         $ary = [];
         foreach($users as $user) {
             $account = session::getAccount($user['user_id']);
-            $ary[] = $account['username'];
+            $ary[] = $account['username'] . " ($account[tag])";
         }
         return implode(' - ', $ary);
     }

@@ -135,7 +135,7 @@ class module {
         foreach($rows as $row) {
             $row = html::specialEncode($row);
             $str.=table::trBegin();
-            $str.=table::td($row['name'] . ' (' . $row['tag'] . ')');
+            $str.=table::td($row['name']);
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();
