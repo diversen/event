@@ -13,9 +13,7 @@ use diversen\user;
 use diversen\html\helpers;
 use modules\event\eDb;
 use modules\event\eHelpers;
-use R;
-
-
+use RedBeanPHP\R;
 
 class module {
     
