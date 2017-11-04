@@ -122,7 +122,7 @@ class module {
             $b = session::getAccount($row['user_b']);
             $str.=table::trBegin();
             $str.=table::td($this->getUserTagStr($a), array ('class' => 'uk-width-3-10'));
-            $str.=table::td($this->getUserTagStr($a), array ('class' => ''));
+            $str.=table::td($this->getUserTagStr($b), array ('class' => ''));
             $str.=table::trEnd();   
         }
         $str.=table::tableEnd();
