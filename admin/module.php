@@ -10,6 +10,7 @@ use diversen\session;
 use modules\event\import;
 use modules\event\eDb;
 use diversen\prg;
+use diversen\http;
 
 class module {
     
@@ -195,16 +196,23 @@ class module {
             if (!empty($this->errors)) {
                 echo html::getErrors($this->errors);
             } else {
+                $_POST['users'] = html::specialDecode($_POST['users']);
                 $ary = $i->getAryFromTxt($_POST['users']);
                 $i->addToDb($ary, $_POST['tag']);
+                session::setActionMessage('Brugere tilføjet');
+                http::locationHeader('/event/admin/import');
+
             }   
             
         }
+
+        echo $this->helpImport();
         echo $this->importForm();
     }
     
     public function importForm () {
         $f = new html();
+        $f->init([], 'submit', true);
         $f->formStart();
         
         $f->legend('Indsæt brugere');
@@ -215,5 +223,15 @@ class module {
         $f->submit('submit', 'Send');
         $f->formEnd();
         return $f->getStr();
+    }
+
+    public function helpImport() {
+        $str = <<<EOF
+
+Formattet er som følger: 
+"Elevens navn" <email@apps.egaa-gym.dk>, "En anden elev" <email2@apps.egaa-gym.dk>, 
+EOF;
+        return nl2br(html::specialEncode($str));
+
     }
 }
