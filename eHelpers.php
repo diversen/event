@@ -4,6 +4,7 @@ namespace modules\event;
 
 use modules\event\eDb;
 use diversen\session;
+use diversen\html;
 
 class eHelpers {
 
